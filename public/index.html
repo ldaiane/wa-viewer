@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <title>WA Viewer Ultra</title>
+    <style>
+        :root { --wa-green: #075e54; --wa-light: #dcf8c6; }
+        body { font-family: sans-serif; background: #e5ddd5; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        header { background: var(--wa-green); color: white; padding: 10px; position: sticky; top: 0; z-index: 100; }
+        .tabs { display: flex; gap: 5px; margin-top: 10px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: rgba(255,255,255,0.2); color: white; border-radius: 5px; cursor: pointer; }
+        .tab-btn.active { background: #25d366; }
+        
+        #chat-area { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; }
+        .bubble { max-width: 85%; padding: 10px; border-radius: 10px; margin-bottom: 8px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); position: relative; }
+        .mine { align-self: flex-end; background: var(--wa-light); }
+        .theirs { align-self: flex-start; background: white; }
+        
+        .gallery { display: none; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 10px; }
+        .gallery.active { display: grid; }
+        .gallery img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 5px; }
+
+        .upload-section { background: white; padding: 15px; border-bottom: 2px solid #ddd; }
+        .search-box { width: 100%; padding: 10px; margin-top: 10px; border-radius: 20px; border: 1px solid #ccc; outline: none; }
+        
+        img, video { max-width: 100%; border-radius: 8px; margin-top: 5px; }
+        audio { width: 100%; height: 35px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>WA Ultra Viewer</div>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('chat')">Chat</button>
+        <button class="tab-btn" onclick="showTab('gallery')">Galeria</button>
+    </div>
+    <input type="text" id="search" class="search-box" placeholder="Pesquisar texto ou data..." onkeyup="filter()">
+</header>
+
+<div class="upload-section">
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="zips" multiple accept=".zip">
+        <button type="submit" style="background:#25d366; color:white; border:none; padding:5px 10px; border-radius:5px;">Processar ZIPs</button>
+    </form>
+</div>
+
+<div id="chat-area"></div>
+<div id="gallery-area" class="gallery"></div>
+
+<script>
+    let msgs = [];
+    const ME = "Você";
+
+    async function load() {
+        const res = await fetch('/messages');
+        msgs = await res.json();
+        render();
+    }
+
+    function render(data = msgs) {
+        const chat = document.getElementById('chat-area');
+        const gallery = document.getElementById('gallery-area');
+        chat.innerHTML = ''; gallery.innerHTML = '';
+
+        data.forEach(m => {
+            const isMine = m.sender.toLowerCase() === ME.toLowerCase();
+            const div = document.createElement('div');
+            div.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
+            
+            let mediaHtml = '';
+            m.medias.forEach(f => {
+                const url = `/media/${encodeURIComponent(f)}`;
+                const ext = f.toLowerCase().split('.').pop();
+                if (['jpg','jpeg','png','webp'].includes(ext)) {
+                    mediaHtml += `<img src="${url}">`;
+                    const gImg = document.createElement('img'); gImg.src = url;
+                    gallery.appendChild(gImg);
+                } else if (['opus','ogg','mp3'].includes(ext)) {
+                    mediaHtml += `<audio controls><source src="${url}" type="audio/ogg"></audio>`;
+                }
+            });
+
+            div.innerHTML = `
+                <div style="font-size:12px; font-weight:bold; color:#075e54">${m.sender}</div>
+                ${mediaHtml}
+                <div>${m.text}</div>
+                <div style="font-size:9px; color:#888; text-align:right">${m.dateStr} ${m.timeStr}</div>
+            `;
+            chat.appendChild(div);
+        });
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function filter() {
+        const q = document.getElementById('search').value.toLowerCase();
+        const f = msgs.filter(m => m.text.toLowerCase().includes(q) || m.dateStr.includes(q));
+        render(f);
+    }
+
+    function showTab(t) {
+        document.getElementById('chat-area').style.display = t === 'chat' ? 'flex' : 'none';
+        document.getElementById('gallery-area').classList.toggle('active', t === 'gallery');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase() === t));
+    }
+
+    load();
+</script>
+</body>
+</html>

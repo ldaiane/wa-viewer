@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WhatsView</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <style>
+        :root { --ios-blue: #007aff; --ios-gray: #e9e9eb; --ios-bg: #f2f2f7; }
+        
+        /* Bloqueio de scroll no corpo para evitar refresh acidental */
+        html, body { 
+            position: fixed; width: 100%; height: 100%; overflow: hidden; 
+            margin: 0; font-family: -apple-system, system-ui, sans-serif; background: #fff;
+        }
+
+        header, .chat-header { 
+            height: 50px; background: rgba(249, 249, 249, 0.94); backdrop-filter: blur(20px);
+            display: flex; justify-content: space-between; align-items: center; padding: 0 16px;
+            border-bottom: 0.5px solid #ccc; z-index: 100;
+        }
+
+        #home-view { height: calc(100% - 50px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        
+        .chat-list-item { 
+            padding: 15px; display: flex; align-items: center; gap: 12px; 
+            border-bottom: 0.5px solid #eee; background: #fff;
+        }
+
+        /* CHAT VIEW - FIXED FULLSCREEN */
+        #chat-view { 
+            display: none; position: fixed; inset: 0; background: var(--ios-bg); 
+            flex-direction: column; z-index: 200;
+        }
+
+        .nav-tabs { display: flex; background: #f9f9f9; padding: 8px; border-bottom: 0.5px solid #ccc; justify-content: center; }
+        .tab-btn { border: none; padding: 6px 20px; font-size: 13px; background: #e5e5ea; cursor: pointer; }
+        .tab-btn.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold; }
+        .tab-btn:first-child { border-radius: 8px 0 0 8px; }
+        .tab-btn:last-child { border-radius: 0 8px 8px 0; }
+
+        /* ÁREA DE MENSAGENS COM SCROLL INDEPENDENTE */
+        .content-area { 
+            flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; 
+            padding: 10px; display: flex; flex-direction: column;
+        }
+
+        .bubble { 
+            max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 10px; 
+            font-size: 15px; position: relative; line-height: 1.4;
+        }
+        .bubble.mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .bubble.theirs { align-self: flex-start; border-bottom-left-radius: 4px; color: #000; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        .sender-name { font-size: 11px; font-weight: bold; margin-bottom: 2px; margin-left: 5px; }
+        .meta { font-size: 10px; opacity: 0.6; text-align: right; margin-top: 5px; }
+
+        /* MÍDIAS ADAPTADAS */
+        .chat-media { margin: 5px 0; border-radius: 10px; overflow: hidden; max-width: 200px; }
+        .chat-media img, .chat-media video { width: 100%; height: auto; display: block; }
+        audio { width: 100%; height: 35px; margin-top: 5px; }
+
+        #internal-gal { display: none; grid-template-columns: repeat(3, 1fr); gap: 2px; overflow-y: auto; }
+        #internal-gal img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+
+        .fab { 
+            position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; 
+            background: var(--ios-blue); color: white; border-radius: 50%; border: none; 
+            font-size: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 300;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="color:var(--ios-blue);" onclick="resetApp()">Limpar</div>
+    <div style="font-weight:bold;">WhatsView</div>
+    <div style="width:40px;"></div>
+</header>
+
+<div id="home-view"></div>
+
+<div id="chat-view">
+    <div class="chat-header">
+        <button style="color:var(--ios-blue); background:none; border:none; font-size:16px;" onclick="confirmExit()">❮ Voltar</button>
+        <div id="chat-title" style="font-weight:bold; overflow:hidden; text-wrap:nowrap; max-width:150px;"></div>
+        <div style="width:50px;"></div>
+    </div>
+    <div class="nav-tabs">
+        <button id="tab-msg" class="tab-btn active" onclick="setTab('msg')">Chat</button>
+        <button id="tab-gal" class="tab-btn" onclick="setTab('gal')">Mídias</button>
+    </div>
+    <div id="msg-container" class="content-area"></div>
+    <div id="internal-gal" class="content-area"></div>
+</div>
+
+<button class="fab" onclick="document.getElementById('fileInput').click()">+</button>
+<input type="file" id="fileInput" multiple webkitdirectory directory style="display:none" onchange="processFiles(this.files)">
+
+<script>
+    let dbMsgs = [];
+    const mediaCache = new Map();
+
+    async function processFiles(files) {
+        alert("Iniciando processamento... Aguarde.");
+        const fileArray = Array.from(files);
+        
+        // 1. Mapeia mídias sem carregar na RAM ainda (usa Blobs)
+        fileArray.forEach(f => {
+            if (!f.name.endsWith('.txt')) {
+                mediaCache.set(f.name, URL.createObjectURL(f));
+            }
+        });
+
+        // 2. Processa os textos
+        for (let f of fileArray) {
+            if (f.name.endsWith('.txt')) {
+                const content = await f.text();
+                const source = f.name.replace('.txt', '');
+                const lines = content.split('\n');
+                
+                lines.forEach(line => {
+                    const match = line.match(/^(\d{2}\/\d{2}\/\d{4})[ ,](\d{2}:\d{2}) - (.*?): (.*)$/);
+                    if (match) {
+                        const [, date, time, sender, msg] = match;
+                        let foundMedia = null;
+                        
+                        // Busca otimizada de mídia no texto
+                        for (let [name, url] of mediaCache) {
+                            if (msg.includes(name)) { foundMedia = { url, name }; break; }
+                        }
+
+                        dbMsgs.push({ date, time, sender, text: msg, media: foundMedia, source });
+                    }
+                });
+            }
+        }
+        
+        await localforage.setItem('wv_data', dbMsgs);
+        renderHome();
+        alert("Pronto! Conversas carregadas.");
+    }
+
+    function renderHome() {
+        const container = document.getElementById('home-view');
+        container.innerHTML = '';
+        const groups = [...new Set(dbMsgs.map(m => m.source))];
+        
+        groups.forEach(g => {
+            const div = document.createElement('div');
+            div.className = 'chat-list-item';
+            div.onclick = () => openChat(g);
+            div.innerHTML = `<div style="width:45px; height:45px; background:#ccc; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">${g[0]}</div>
+                             <div style="font-weight:600;">${g}</div>`;
+            container.appendChild(div);
+        });
+    }
+
+    function openChat(source) {
+        const container = document.getElementById('msg-container');
+        const gal = document.getElementById('internal-gal');
+        container.innerHTML = ''; gal.innerHTML = '';
+        document.getElementById('chat-title').innerText = source;
+
+        const filtered = dbMsgs.filter(m => m.source === source);
+        filtered.forEach(m => {
+            const isMine = m.sender.includes("Você") || m.sender.includes("Me");
+            const color = getColors(m.sender);
+
+            const wrap = document.createElement('div');
+            wrap.style.display = 'flex';
+            wrap.style.flexDirection = 'column';
+
+            if (!isMine) {
+                wrap.innerHTML += `<div class="sender-name" style="color:${color.text}">${m.sender}</div>`;
+            }
+
+            const bubble = document.createElement('div');
+            bubble.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
+            if (!isMine) bubble.style.background = color.bg;
+
+            let mediaHtml = '';
+            if (m.media) {
+                const ext = m.media.name.split('.').pop().toLowerCase();
+                if (['jpg','png','jpeg','webp'].includes(ext)) {
+                    mediaHtml = `<div class="chat-media"><img src="${m.media.url}"></div>`;
+                    gal.innerHTML += `<img src="${m.media.url}" onclick="window.open('${m.media.url}')">`;
+                } else if (['mp4','mov'].includes(ext)) {
+                    mediaHtml = `<div class="chat-media"><video controls playsinline src="${m.media.url}"></video></div>`;
+                } else if (['mp3','opus','ogg'].includes(ext)) {
+                    mediaHtml = `<audio controls src="${m.media.url}"></audio>`;
+                }
+            }
+
+            bubble.innerHTML += `${mediaHtml}<div>${m.text}</div><div class="meta">${m.date} ${m.time}</div>`;
+            wrap.appendChild(bubble);
+            container.appendChild(wrap);
+        });
+
+        document.getElementById('chat-view').style.display = 'flex';
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function setTab(t) {
+        document.getElementById('msg-container').style.display = t === 'msg' ? 'flex' : 'none';
+        document.getElementById('internal-gal').style.display = t === 'gal' ? 'grid' : 'none';
+        document.getElementById('tab-msg').classList.toggle('active', t === 'msg');
+        document.getElementById('tab-gal').classList.toggle('active', t === 'gal');
+    }
+
+    function confirmExit() { if(confirm("Sair da conversa?")) document.getElementById('chat-view').style.display = 'none'; }
+    function getColors(n) {
+        let h = 0; for(let i=0; i<n.length; i++) h = n.charCodeAt(i) + ((h << 5) - h);
+        const hue = Math.abs(h % 360);
+        return { text: `hsl(${hue}, 70%, 30%)`, bg: `hsl(${hue}, 70%, 93%)` };
+    }
+
+    async function resetApp() { if(confirm("Limpar tudo?")) { await localforage.clear(); location.reload(); } }
+    
+    // Auto-carregamento
+    localforage.getItem('wv_data').then(d => { if(d) { dbMsgs = d; renderHome(); } });
+</script>
+</body>
+</html>

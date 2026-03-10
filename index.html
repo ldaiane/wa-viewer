@@ -4,44 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#007aff">
-    <link rel="manifest" href="manifest.json">
     <title>WhatsView Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <style>
         :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
         html, body { position: fixed; width: 100%; height: 100%; overflow: hidden; margin: 0; font-family: -apple-system, sans-serif; background: #fff; }
-        
         header { height: 50px; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 0.5px solid #ccc; z-index: 100; }
-        
-        /* BARRA DE BUSCA */
         .search-container { padding: 8px 12px; background: #fff; border-bottom: 0.5px solid #ccc; }
         #searchInput { width: 100%; padding: 8px 12px; border-radius: 10px; border: none; background: #e5e5ea; font-size: 14px; outline: none; box-sizing: border-box; }
-
         #home-view { height: calc(100% - 50px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        .chat-list-item { padding: 15px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; }
-
+        .chat-list-item { padding: 15px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; cursor: pointer; }
         #chat-view { display: none; position: fixed; inset: 0; background: var(--ios-bg); flex-direction: column; z-index: 200; }
         .content-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: flex; flex-direction: column; }
-        
-        .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 10px; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 8px; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
         .mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; }
-        
-        .origin-tag { font-size: 9px; font-weight: 800; display: block; margin-bottom: 4px; opacity: 0.7; text-transform: uppercase; border-bottom: 0.5px solid rgba(0,0,0,0.1); padding-bottom: 2px; }
-        .theirs .origin-tag { color: var(--ios-blue); }
-        
         .meta { font-size: 9px; opacity: 0.5; text-align: right; margin-top: 5px; }
         .fab { position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; border: none; font-size: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 300; }
-        .chat-media img { max-width: 100%; border-radius: 10px; margin-top: 5px; display: block; }
+        .media-box { margin-top: 8px; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.03); }
+        img, video { max-width: 100%; display: block; border-radius: 8px; }
+        audio { width: 100%; height: 35px; margin-top: 5px; }
+        .pdf-link { display: block; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 8px; text-decoration: none; color: #000; font-weight: bold; font-size: 12px; text-align: center; }
     </style>
 </head>
 <body>
 
 <header>
     <div style="color:var(--ios-blue); font-size:12px; font-weight:bold;" onclick="resetApp()">LIMPAR</div>
-    <div style="font-weight:bold;">WhatsView</div>
-    <div id="installBtn" style="display:none; color:var(--ios-blue); font-weight:bold; font-size:12px;">INSTALAR</div>
+    <div style="font-weight:bold;">WhatsView Pro</div>
+    <div style="width:40px;"></div>
 </header>
 
 <div id="home-view"></div>
@@ -49,58 +41,71 @@
 <div id="chat-view">
     <header>
         <div style="color:var(--ios-blue); font-weight:bold;" onclick="closeChat()">❮ VOLTAR</div>
-        <div id="chat-title" style="font-weight:bold; font-size:14px;"></div>
+        <div id="chat-title" style="font-weight:bold; font-size:13px;"></div>
         <div style="width:40px;"></div>
     </header>
-    <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Buscar na conversa..." oninput="filterMessages()">
-    </div>
+    <div class="search-container"><input type="text" id="searchInput" placeholder="Buscar..." oninput="filterMessages()"></div>
     <div id="msg-container" class="content-area"></div>
 </div>
 
 <button class="fab" onclick="document.getElementById('fileInput').click()">+</button>
-<input type="file" id="fileInput" multiple webkitdirectory directory accept=".zip,.txt" style="display:none" onchange="handleFiles(this.files)">
+<input type="file" id="fileInput" multiple accept=".zip,.txt" style="display:none" onchange="handleFiles(this.files)">
 
 <script>
     let mainDb = [];
-    const mediaStorage = new Map();
+    let mediaUrls = new Map();
     let currentGroup = "";
 
     async function handleFiles(files) {
-        alert("Processando arquivos...");
+        alert("Organizando mensagens por data...");
         for (let file of Array.from(files)) {
-            if (file.name.toLowerCase().endsWith('.zip')) {
+            if (file.name.endsWith('.zip')) {
                 const zip = await JSZip.loadAsync(file);
                 for (let filename in zip.files) {
                     const entry = zip.files[filename];
                     if (filename.endsWith('.txt')) {
-                        const text = await entry.async("string");
-                        processText(text, filename);
+                        processText(await entry.async("string"), filename);
                     } else if (!entry.dir) {
                         const blob = await entry.async("blob");
-                        mediaStorage.set(filename, URL.createObjectURL(blob));
+                        mediaUrls.set(filename, URL.createObjectURL(blob));
                     }
                 }
-            } else if (file.name.toLowerCase().endsWith('.txt')) {
-                const text = await file.text();
-                processText(text, file.name);
+            } else if (file.name.endsWith('.txt')) {
+                processText(await file.text(), file.name);
             }
         }
-        await localforage.setItem('wv_data_final', mainDb);
+
+        // ORDENAÇÃO CRONOLÓGICA
+        mainDb.sort((a, b) => a.timestamp - b.timestamp);
+
+        // REMOVE DUPLICADAS
+        const seen = new Set();
+        mainDb = mainDb.filter(item => {
+            const k = `${item.timestamp}-${item.sender}-${item.text}`;
+            return seen.has(k) ? false : seen.add(k);
+        });
+
+        await localforage.setItem('wv_db_v4', mainDb);
         renderHome();
-        alert("Concluído!");
+        if(currentGroup) openChat(currentGroup);
+        alert("Histórico atualizado!");
     }
 
     function processText(content, fileName) {
         const lines = content.split('\n');
-        const group = fileName.replace('.txt', '');
+        const groupName = fileName.replace('Conversa do WhatsApp com ', '').replace('.txt', '');
+        
         lines.forEach(line => {
-            const match = line.match(/^(\d{2}\/\d{2}\/\d{4})[ ,](\d{2}:\d{2}) - (.*?): (.*)$/);
+            const match = line.match(/^(\d{2})\/(\d{2})\/(\d{4})[ ,](\d{2}):(\d{2}) - (.*?): (.*)$/);
             if (match) {
-                const [, date, time, sender, text] = match;
-                let media = null;
-                for (let [mName, mUrl] of mediaStorage) { if (text.includes(mName)) { media = mUrl; break; } }
-                mainDb.push({ date, time, sender, text, group, origin: fileName, media });
+                const [, day, month, year, hour, min, sender, text] = match;
+                const timestamp = new Date(year, month - 1, day, hour, min).getTime();
+                
+                let mediaKey = null;
+                for (let mName of mediaUrls.keys()) {
+                    if (text.includes(mName)) { mediaKey = mName; break; }
+                }
+                mainDb.push({ date: `${day}/${month}/${year}`, time: `${hour}:${min}`, timestamp, sender, text, group: groupName, mediaKey });
             }
         });
     }
@@ -112,7 +117,7 @@
             const div = document.createElement('div');
             div.className = 'chat-list-item';
             div.onclick = () => openChat(g);
-            div.innerHTML = `<div style="width:40px; height:40px; background:var(--ios-blue); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold;">${g[0]}</div><div style="font-weight:600;">${g}</div>`;
+            div.innerHTML = `<div style="width:40px; height:40px; background:var(--ios-blue); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold;">${g[0].toUpperCase()}</div><div style="font-weight:600;">${g}</div>`;
             home.appendChild(div);
         });
     }
@@ -120,7 +125,6 @@
     function openChat(groupName) {
         currentGroup = groupName;
         document.getElementById('chat-title').innerText = groupName;
-        document.getElementById('searchInput').value = '';
         renderMessages(mainDb.filter(m => m.group === groupName));
         document.getElementById('chat-view').style.display = 'flex';
     }
@@ -129,13 +133,22 @@
         const container = document.getElementById('msg-container');
         container.innerHTML = '';
         msgs.forEach(m => {
-            const isMine = m.sender.includes("Você") || m.sender.includes("Me");
+            const isMine = m.sender.toLowerCase().includes("você") || m.sender.toLowerCase().includes("me");
             const div = document.createElement('div');
             div.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
-            div.innerHTML = `<span class="origin-tag">📂 ${m.origin}</span>
-                             <div style="font-weight:bold; font-size:11px; margin-bottom:2px;">${m.sender}</div>
-                             ${m.media ? `<img src="${m.media}" style="width:100%; border-radius:8px; margin:5px 0;">` : ''}
-                             <div>${m.text}</div><div class="meta">${m.date} ${m.time}</div>`;
+            
+            let mediaHtml = '';
+            if (m.mediaKey) {
+                const url = mediaUrls.get(m.mediaKey);
+                if (m.mediaKey.match(/\.(jpg|jpeg|png|webp|gif)$/i)) mediaHtml = `<div class="media-box"><img src="${url}"></div>`;
+                else if (m.mediaKey.match(/\.(mp4|3gp|mov)$/i)) mediaHtml = `<div class="media-box"><video controls src="${url}"></video></div>`;
+                else if (m.mediaKey.match(/\.(opus|mp3|m4a)$/i)) mediaHtml = `<audio controls src="${url}"></audio>`;
+                else if (m.mediaKey.endsWith('.pdf')) mediaHtml = `<a href="${url}" target="_blank" class="pdf-link">📄 PDF: ${m.mediaKey}</a>`;
+            }
+
+            div.innerHTML = `<div style="font-weight:bold; font-size:10px; opacity:0.7;">${m.sender}</div>
+                             ${mediaHtml}<div style="margin-top:4px;">${m.text}</div>
+                             <div class="meta">${m.date} ${m.time}</div>`;
             container.appendChild(div);
         });
         container.scrollTop = container.scrollHeight;
@@ -143,14 +156,12 @@
 
     function filterMessages() {
         const term = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = mainDb.filter(m => m.group === currentGroup && m.text.toLowerCase().includes(term));
-        renderMessages(filtered);
+        renderMessages(mainDb.filter(m => m.group === currentGroup && m.text.toLowerCase().includes(term)));
     }
 
-    function closeChat() { document.getElementById('chat-view').style.display = 'none'; }
-    function resetApp() { if(confirm("Apagar tudo?")) { localforage.clear().then(() => location.reload()); } }
-    
-    localforage.getItem('wv_data_final').then(saved => { if(saved) { mainDb = saved; renderHome(); } });
+    function closeChat() { document.getElementById('chat-view').style.display = 'none'; currentGroup = ""; }
+    function resetApp() { if(confirm("Limpar dados?")) { localforage.clear().then(() => location.reload()); } }
+    localforage.getItem('wv_db_v4').then(saved => { if(saved) { mainDb = saved; renderHome(); } });
 </script>
 </body>
 </html>

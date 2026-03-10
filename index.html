@@ -7,40 +7,30 @@
 
 <title>WhatsView</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <style>
 
-:root{
---bg:#f2f2f7;
---blue:#007aff;
-}
-
 body{
 margin:0;
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial;
-background:var(--bg);
+font-family:Arial;
+background:#f2f2f7;
 height:100vh;
 display:flex;
 flex-direction:column;
-overflow:hidden;
 }
 
-/* HEADER */
-
 header{
-height:56px;
+height:55px;
 display:flex;
 align-items:center;
 justify-content:space-between;
-padding:0 16px;
+padding:0 15px;
 background:white;
 border-bottom:1px solid #eee;
-font-weight:600;
+font-weight:bold;
 }
-
-/* TABS */
 
 #tabs{
 display:flex;
@@ -51,45 +41,26 @@ border-bottom:1px solid #eee;
 .tab{
 flex:1;
 text-align:center;
-padding:12px;
+padding:10px;
 cursor:pointer;
 }
 
 .tab.active{
-color:var(--blue);
-border-bottom:2px solid var(--blue);
+color:#007aff;
+border-bottom:2px solid #007aff;
 }
-
-/* CHAT LIST */
 
 #chat-list{
 flex:1;
 overflow:auto;
 }
 
-.chat-row{
-display:flex;
-align-items:center;
-gap:12px;
-padding:14px;
+.chat{
+padding:12px;
 border-bottom:1px solid #eee;
 background:white;
 cursor:pointer;
 }
-
-.avatar{
-width:44px;
-height:44px;
-border-radius:50%;
-background:linear-gradient(135deg,#007aff,#34c759);
-color:white;
-display:flex;
-align-items:center;
-justify-content:center;
-font-weight:600;
-}
-
-/* CHAT */
 
 #chat-view{
 position:fixed;
@@ -102,48 +73,30 @@ flex-direction:column;
 #messages{
 flex:1;
 overflow:auto;
-padding:12px;
-display:flex;
-flex-direction:column;
-gap:8px;
+padding:10px;
 }
 
 .bubble{
 background:white;
-padding:10px 14px;
-border-radius:16px;
+padding:8px 12px;
+border-radius:10px;
+margin-bottom:8px;
 max-width:75%;
 font-size:14px;
 }
 
-.time{
-font-size:10px;
-opacity:.6;
-text-align:right;
-margin-top:4px;
-}
-
-.date{
-align-self:center;
-background:#ddd;
-padding:4px 10px;
-border-radius:8px;
-font-size:12px;
-}
-
 .media img,
-.media video{
+.media video,
+.media audio{
 max-width:100%;
-border-radius:10px;
-margin-top:6px;
+border-radius:8px;
+margin-top:5px;
 }
-
-/* GALERIA */
 
 #galeria{
+display:none;
 flex:1;
 overflow:auto;
-display:none;
 padding:6px;
 }
 
@@ -153,21 +106,14 @@ grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
 gap:6px;
 }
 
-.grid div{
-aspect-ratio:1;
-overflow:hidden;
-border-radius:10px;
-background:#ddd;
-}
-
 .grid img,
 .grid video{
 width:100%;
-height:100%;
+height:120px;
 object-fit:cover;
+border-radius:8px;
+cursor:pointer;
 }
-
-/* VIEWER */
 
 .viewer{
 position:fixed;
@@ -184,33 +130,18 @@ max-width:100%;
 max-height:100%;
 }
 
-/* BUTTON */
-
 .fab{
 position:fixed;
 bottom:20px;
 right:20px;
-width:56px;
-height:56px;
+width:55px;
+height:55px;
 border:none;
 border-radius:50%;
 background:#25d366;
 color:white;
-font-size:28px;
+font-size:26px;
 cursor:pointer;
-}
-
-/* LOADER */
-
-#loader{
-position:fixed;
-inset:0;
-background:rgba(0,0,0,.5);
-display:none;
-align-items:center;
-justify-content:center;
-color:white;
-font-size:20px;
 }
 
 </style>
@@ -225,70 +156,60 @@ font-size:20px;
 </header>
 
 <div id="tabs">
-<div class="tab active" onclick="abrirTab('chats')">Chats</div>
-<div class="tab" onclick="abrirTab('galeria')">Galeria</div>
+<div class="tab active" onclick="tab('chats')">Chats</div>
+<div class="tab" onclick="tab('galeria')">Galeria</div>
 </div>
 
 <div id="chat-list"></div>
 
 <div id="galeria">
-<div class="grid" id="gridMidia"></div>
+<div class="grid" id="grid"></div>
 </div>
 
-<button class="fab" onclick="abrirArquivos()">+</button>
+<button class="fab" onclick="files.click()">+</button>
 
 <div id="chat-view">
 
 <header>
-<div onclick="fecharChat()">❮</div>
+<div onclick="fechar()">❮</div>
 <div id="chat-title"></div>
-<div onclick="abrirArquivos()">📎</div>
 </header>
 
 <div id="messages"></div>
 
 </div>
 
-<div class="viewer" id="viewer" onclick="fecharViewer()">
-<img id="viewer-img">
-<video id="viewer-video" controls></video>
+<div class="viewer" id="viewer" onclick="viewer.style.display='none'">
+<img id="vimg">
+<video id="vvid" controls></video>
 </div>
-
-<div id="loader">Importando...</div>
 
 <input type="file" id="files" multiple hidden>
 
 <script>
 
 let db=[]
-let currentChat=null
-let msgIndex=new Set()
-let urlCache={}
+let chatAtual="Backup WhatsApp"
 
-async function iniciar(){
+async function init(){
 
 let d=await localforage.getItem("db")
 
-if(d){
-db=d
-d.forEach(m=>{
-msgIndex.add(m.ts+"_"+m.sender+"_"+m.msg)
-})
-}
+if(d) db=d
 
 renderChats()
 
 }
 
-iniciar()
+init()
 
 /* TABS */
 
-function abrirTab(tab){
+function tab(t){
 
-document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
+document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"))
 
-if(tab==="chats"){
+if(t==="chats"){
 
 document.querySelectorAll(".tab")[0].classList.add("active")
 document.getElementById("chat-list").style.display="block"
@@ -310,34 +231,32 @@ renderGaleria()
 
 function renderChats(){
 
-let area=document.getElementById("chat-list")
-area.innerHTML=""
+let list=document.getElementById("chat-list")
+
+list.innerHTML=""
 
 let chats=[...new Set(db.map(x=>x.grupo))]
 
 chats.forEach(c=>{
 
-let row=document.createElement("div")
-row.className="chat-row"
+let d=document.createElement("div")
 
-row.innerHTML=`
-<div class="avatar">${c.substring(0,2).toUpperCase()}</div>
-<div>${c}</div>
-`
+d.className="chat"
+d.innerText=c
 
-row.onclick=()=>abrirChat(c)
+d.onclick=()=>abrirChat(c)
 
-area.appendChild(row)
+list.appendChild(d)
 
 })
 
 }
 
-/* OPEN CHAT */
+/* CHAT */
 
 function abrirChat(nome){
 
-currentChat=nome
+chatAtual=nome
 
 document.getElementById("chat-title").innerText=nome
 document.getElementById("chat-view").style.display="flex"
@@ -346,38 +265,24 @@ renderChat()
 
 }
 
-function fecharChat(){
-document.getElementById("chat-view").style.display="none"
-}
+function fechar(){
 
-/* RENDER CHAT */
+document.getElementById("chat-view").style.display="none"
+
+}
 
 async function renderChat(){
 
 let area=document.getElementById("messages")
+
 area.innerHTML=""
 
-let msgs=db.filter(m=>m.grupo===currentChat)
+let msgs=db.filter(m=>m.grupo===chatAtual).slice(-200)
 
-let ultima=""
-
-for(let m of msgs.slice(-300)){
-
-let data=new Date(m.ts).toLocaleDateString()
-
-if(data!==ultima){
-
-let d=document.createElement("div")
-d.className="date"
-d.innerText=data
-
-area.appendChild(d)
-
-ultima=data
-
-}
+for(let m of msgs){
 
 let div=document.createElement("div")
+
 div.className="bubble"
 
 let media=""
@@ -388,25 +293,22 @@ let blob=await localforage.getItem("media_"+m.mKey)
 
 if(blob){
 
-if(!urlCache[m.mKey]){
-urlCache[m.mKey]=URL.createObjectURL(blob)
-}
+let url=URL.createObjectURL(blob)
 
-let url=urlCache[m.mKey]
+if(m.mKey.match(/jpg|png|jpeg|webp|gif/i))
+media=`<div class="media"><img src="${url}" onclick="verImg('${url}')"></div>`
 
-if(m.mKey.match(/\.(jpg|jpeg|png|gif|webp)/i))
-media=`<div class="media"><img src="${url}" onclick="verImagem('${url}')"></div>`
-
-if(m.mKey.match(/\.(mp4|webm|mov)/i))
+if(m.mKey.match(/mp4|webm|mov/i))
 media=`<div class="media"><video src="${url}" controls></video>`
 
-}
+if(m.mKey.match(/mp3|opus|ogg|m4a/i))
+media=`<div class="media"><audio src="${url}" controls></audio>`
 
 }
 
-let hora=new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+}
 
-div.innerHTML=`<b>${m.sender}</b><div>${media}${m.msg}</div><div class="time">${hora}</div>`
+div.innerHTML=`<b>${m.sender}</b><div>${media}${m.msg}</div>`
 
 area.appendChild(div)
 
@@ -420,34 +322,37 @@ area.scrollTop=area.scrollHeight
 
 async function renderGaleria(){
 
-let area=document.getElementById("gridMidia")
-area.innerHTML=""
+let grid=document.getElementById("grid")
 
-let midias=db.filter(m=>m.mKey).slice(-200).reverse()
+grid.innerHTML=""
 
-for(let m of midias){
+let midia=db.filter(x=>x.mKey).slice(-150).reverse()
+
+for(let m of midia){
 
 let blob=await localforage.getItem("media_"+m.mKey)
-if(!blob)continue
 
-if(!urlCache[m.mKey])
-urlCache[m.mKey]=URL.createObjectURL(blob)
+if(!blob) continue
 
-let url=urlCache[m.mKey]
+let url=URL.createObjectURL(blob)
 
-let div=document.createElement("div")
+let el=document.createElement("div")
 
-if(m.mKey.match(/\.(jpg|jpeg|png|gif|webp)/i)){
-div.innerHTML=`<img src="${url}">`
-div.onclick=()=>verImagem(url)
+if(m.mKey.match(/jpg|png|jpeg|webp|gif/i)){
+
+el.innerHTML=`<img src="${url}">`
+el.onclick=()=>verImg(url)
+
 }
 
-if(m.mKey.match(/\.(mp4|webm|mov)/i)){
-div.innerHTML=`<video src="${url}"></video>`
-div.onclick=()=>verVideo(url)
+if(m.mKey.match(/mp4|webm|mov/i)){
+
+el.innerHTML=`<video src="${url}"></video>`
+el.onclick=()=>verVid(url)
+
 }
 
-area.appendChild(div)
+grid.appendChild(el)
 
 }
 
@@ -455,66 +360,89 @@ area.appendChild(div)
 
 /* VIEWER */
 
-function verImagem(url){
+function verImg(url){
 
-let img=document.getElementById("viewer-img")
-let vid=document.getElementById("viewer-video")
-
-vid.pause()
-vid.style.display="none"
+let img=document.getElementById("vimg")
+let vid=document.getElementById("vvid")
 
 img.src=url
 img.style.display="block"
 
+vid.style.display="none"
+
 document.getElementById("viewer").style.display="flex"
 
 }
 
-function verVideo(url){
+function verVid(url){
 
-let img=document.getElementById("viewer-img")
-let vid=document.getElementById("viewer-video")
-
-img.style.display="none"
+let img=document.getElementById("vimg")
+let vid=document.getElementById("vvid")
 
 vid.src=url
 vid.style.display="block"
-vid.play()
+
+img.style.display="none"
 
 document.getElementById("viewer").style.display="flex"
-
-}
-
-function fecharViewer(){
-
-document.getElementById("viewer").style.display="none"
 
 }
 
 /* IMPORT */
 
-function abrirArquivos(){
-document.getElementById("files").click()
-}
+document.getElementById("files").addEventListener("change",async e=>{
 
-document.getElementById("files").addEventListener("change",e=>{
-importar(e.target.files)
-})
+for(let f of e.target.files){
 
-async function importar(files){
+if(f.name.endsWith(".zip")){
 
-document.getElementById("loader").style.display="flex"
+let zip=await JSZip.loadAsync(f)
 
-for(let file of files){
+for(let p in zip.files){
 
-if(file.name.endsWith(".txt")){
+let entry=zip.files[p]
 
-let txt=await file.text()
-parseTexto(txt)
+if(entry.dir) continue
+
+if(p.endsWith(".txt")){
+
+let txt=await entry.async("string")
+parseTxt(txt)
 
 }else{
 
-await salvar(file,file.name)
+let blob=await entry.async("blob")
+
+await localforage.setItem("media_"+p,blob)
+
+db.push({
+sender:"Arquivo",
+msg:p,
+grupo:"Backup WhatsApp",
+mKey:p,
+ts:Date.now()
+})
+
+}
+
+}
+
+}else if(f.name.endsWith(".txt")){
+
+let txt=await f.text()
+parseTxt(txt)
+
+}else{
+
+await localforage.setItem("media_"+f.name,f)
+
+db.push({
+sender:"Arquivo",
+msg:f.name,
+grupo:"Backup WhatsApp",
+mKey:f.name,
+ts:Date.now()
+})
 
 }
 
@@ -522,70 +450,46 @@ await salvar(file,file.name)
 
 await localforage.setItem("db",db)
 
-document.getElementById("loader").style.display="none"
-
 renderChats()
 
-}
-
-/* SAVE MEDIA */
-
-async function salvar(blob,nome){
-
-let id="media_"+nome
-
-if(await localforage.getItem(id)) return
-
-await localforage.setItem(id,blob)
-
-db.push({
-ts:Date.now(),
-sender:"Arquivo",
-msg:nome,
-grupo:"Importado",
-mKey:nome
 })
-
-}
 
 /* PARSER */
 
-function parseTexto(t){
+function parseTxt(t){
 
-let linhas=t.split(/\r?\n/)
+let linhas=t.split(/\n/)
 
 linhas.forEach(l=>{
 
-let m=l.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s(\d{1,2}):(\d{2})\s-\s(.*?):\s([\s\S]*)$/)
+let m=l.match(/^(\d+\/\d+\/\d+).*?- (.*?): (.*)$/)
 
 if(!m) return
 
-let ano=m[3].length==2?"20"+m[3]:m[3]
+let msg=m[3]
 
-let data=new Date(`${ano}-${m[2]}-${m[1]}T${m[4]}:${m[5]}`)
+let media=null
 
-let id=data.getTime()+"_"+m[6]+"_"+m[7]
-
-if(msgIndex.has(id)) return
-
-msgIndex.add(id)
+if(msg.match(/\.(jpg|jpeg|png|gif|webp|mp4|mov|webm|mp3|opus|ogg|m4a)/i))
+media=msg
 
 db.push({
-ts:data.getTime(),
-sender:m[6],
-msg:m[7],
-grupo:"Importado"
+sender:m[2],
+msg:msg,
+grupo:"Backup WhatsApp",
+mKey:media,
+ts:Date.now()
 })
 
 })
 
 }
 
-/* CLEAR */
+/* LIMPAR */
 
 function limpar(){
 
-if(confirm("Apagar tudo?")){
+if(confirm("Apagar dados?")){
 
 localforage.clear().then(()=>location.reload())
 
@@ -597,15 +501,13 @@ localforage.clear().then(()=>location.reload())
 
 async function exportar(){
 
-let zip=new JSZip()
-
-zip.file("backup.json",JSON.stringify(db))
-
-let blob=await zip.generateAsync({type:"blob"})
+let blob=new Blob([JSON.stringify(db)],{type:"application/json"})
 
 let a=document.createElement("a")
+
 a.href=URL.createObjectURL(blob)
-a.download="backup.zip"
+a.download="backup.json"
+
 a.click()
 
 }

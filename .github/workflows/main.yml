@@ -1,13 +1,12 @@
-name: Build e Release WhatsView
+name: Build WhatsView APK Debug
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  android-release:
+  android-build:
     runs-on: ubuntu-latest
 
     steps:
@@ -83,31 +82,14 @@ jobs:
       - name: Sincronizar Capacitor
         run: npx cap sync android
 
-      - name: Configurar Keystore
-        run: |
-          echo $KEYSTORE_BASE64 | base64 --decode > android/keystore.jks
-
-      - name: Compilar Release APK e AAB
+      - name: Compilar APK Debug
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew clean assembleRelease bundleRelease \
-            -Pandroid.injected.signing.store.file=keystore.jks \
-            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
-            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
-            -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+          ./gradlew assembleDebug
 
-      - name: Upload APK e AAB
+      - name: Enviar APK Debug
         uses: actions/upload-artifact@v4
         with:
-          name: WhatsView-Release
-          path: |
-            android/app/build/outputs/apk/release/app-release.apk
-            android/app/build/outputs/bundle/release/app-release.aab
-
-      - name: Criar Release Automático
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: WhatsView-Debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk

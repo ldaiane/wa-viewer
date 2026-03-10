@@ -1,11 +1,15 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>WhatsView Pro+</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 
 <style>
@@ -17,7 +21,7 @@
 
 body{
 margin:0;
-font-family:-apple-system;
+font-family:-apple-system,Arial;
 height:100vh;
 display:flex;
 flex-direction:column;
@@ -31,7 +35,7 @@ align-items:center;
 justify-content:space-between;
 padding:0 16px;
 border-bottom:1px solid #ccc;
-background:#fff;
+background:white;
 }
 
 #home-view{
@@ -52,7 +56,7 @@ width:45px;
 height:45px;
 border-radius:50%;
 background:var(--blue);
-color:#fff;
+color:white;
 display:flex;
 align-items:center;
 justify-content:center;
@@ -80,6 +84,7 @@ max-width:80%;
 padding:10px;
 border-radius:12px;
 font-size:14px;
+box-shadow:0 1px 2px rgba(0,0,0,.1);
 }
 
 .mine{
@@ -91,6 +96,13 @@ align-self:flex-end;
 .theirs{
 background:white;
 align-self:flex-start;
+}
+
+.date-divider{
+text-align:center;
+font-size:12px;
+color:#666;
+margin:10px 0;
 }
 
 .media img,.media video{
@@ -137,6 +149,7 @@ max-height:100%;
 }
 
 </style>
+
 </head>
 
 <body>
@@ -156,7 +169,10 @@ max-height:100%;
 <header>
 <div onclick="fechar()">❮</div>
 <div id="chat-title"></div>
-<div onclick="abrirArquivos()">➕</div>
+<div>
+<span onclick="verGaleria()">🖼</span>
+<span onclick="abrirArquivos()">➕</span>
+</div>
 </header>
 
 <input id="search" placeholder="Buscar..." oninput="buscar(this.value)">
@@ -177,23 +193,26 @@ max-height:100%;
 
 let db=[]
 let chat=""
-let urls={}
+let urlCache={}
 
 localforage.getItem("db").then(d=>{
-if(d)db=d
+if(d) db=d
 renderHome()
 })
 
 function novaConversa(){
 let nome=prompt("Nome da conversa")
-if(nome)abrir(nome)
+if(nome) abrir(nome)
 }
 
 function abrir(nome){
+
 chat=nome
 document.getElementById("chat-title").innerText=nome
 document.getElementById("chat-view").style.display="flex"
+
 carregar()
+
 }
 
 function fechar(){
@@ -229,6 +248,7 @@ db.sort((a,b)=>a.ts-b.ts)
 await localforage.setItem("db",db)
 
 carregar()
+renderHome()
 
 }
 
@@ -240,18 +260,16 @@ for(const path in zip.files){
 
 let entry=zip.files[path]
 
-if(entry.dir)continue
+if(entry.dir) continue
 
 if(path.endsWith(".txt")){
 
 let txt=await entry.async("string")
-
 parseTexto(txt)
 
 }else{
 
 let blob=await entry.async("blob")
-
 await salvar(blob,path)
 
 }
@@ -262,12 +280,14 @@ await salvar(blob,path)
 
 async function salvar(blob,nome){
 
+if(db.find(x=>x.mKey===nome)) return
+
 await localforage.setItem("media_"+nome,blob)
 
 db.push({
 ts:Date.now(),
 sender:"Arquivo",
-msg:nome,
+msg:"",
 grupo:chat,
 mKey:nome
 })
@@ -280,14 +300,23 @@ let linhas=t.split("\n")
 
 for(let l of linhas){
 
-let m=l.match(/^(\d{2})\/(\d{2})\/(\d{4}).* - (.*?): (.*)$/)
+let m=l.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s(\d{1,2}):(\d{2})\s-\s(.*?):\s([\s\S]*)$/)
 
 if(m){
 
+let dia=m[1]
+let mes=m[2]
+let ano=m[3].length==2 ? "20"+m[3] : m[3]
+
+let hora=m[4]
+let min=m[5]
+
+let data=new Date(`${ano}-${mes}-${dia}T${hora}:${min}:00`)
+
 db.push({
-ts:Date.now(),
-sender:m[4],
-msg:m[5],
+ts:data.getTime(),
+sender:m[6],
+msg:m[7],
 grupo:chat
 })
 
@@ -300,15 +329,28 @@ grupo:chat
 async function carregar(){
 
 let area=document.getElementById("messages")
-
 let gal=document.getElementById("gallery")
 
 area.innerHTML=""
 gal.innerHTML=""
 
-let msgs=db.filter(x=>x.grupo==chat)
+let msgs=db.filter(x=>x.grupo==chat).slice(-2000)
+
+let ultimaData=""
 
 for(let m of msgs){
+
+let data=new Date(m.ts).toLocaleDateString()
+
+if(data!==ultimaData){
+
+let d=document.createElement("div")
+d.className="date-divider"
+d.innerText=data
+area.appendChild(d)
+
+ultimaData=data
+}
 
 let div=document.createElement("div")
 
@@ -324,11 +366,17 @@ let blob=await localforage.getItem("media_"+m.mKey)
 
 if(blob){
 
-let url=URL.createObjectURL(blob)
+let url
+
+if(!urlCache[m.mKey]){
+urlCache[m.mKey]=URL.createObjectURL(blob)
+}
+
+url=urlCache[m.mKey]
 
 let l=m.mKey.toLowerCase()
 
-if(l.match(/\.(jpg|png|jpeg|webp)/)){
+if(l.match(/\.(jpg|jpeg|png|webp|gif)/)){
 
 media=`<div class="media"><img src="${url}" onclick="ver('${url}')"></div>`
 
@@ -339,11 +387,11 @@ gal.appendChild(g)
 
 }
 
-else if(l.match(/\.(mp4|3gp)/))
+else if(l.match(/\.(mp4|3gp|mov|mkv|webm)/))
 media=`<div class="media"><video controls src="${url}"></video></div>`
 
-else if(l.match(/\.(mp3|ogg|m4a|opus)/))
-media=`<audio controls src="${url}"></audio>`
+else if(l.match(/\.(mp3|ogg|m4a|opus|aac|wav)/))
+media=`<audio controls preload="metadata" src="${url}"></audio>`
 
 else if(l.endsWith(".pdf"))
 media=`<a href="${url}" target="_blank">📄 PDF</a>`
@@ -358,6 +406,8 @@ area.appendChild(div)
 
 }
 
+area.scrollTop=area.scrollHeight
+
 }
 
 function renderHome(){
@@ -371,10 +421,11 @@ let grupos=[...new Set(db.map(x=>x.grupo))]
 for(let g of grupos){
 
 let d=document.createElement("div")
-
 d.className="chat-item"
 
-d.innerHTML=`<div class="avatar">${g[0]}</div>${g}`
+let avatar=(g && g.length)?g[0]:"?"
+
+d.innerHTML=`<div class="avatar">${avatar}</div>${g}`
 
 d.onclick=()=>abrir(g)
 
@@ -385,8 +436,10 @@ h.appendChild(d)
 }
 
 function ver(url){
+
 document.getElementById("viewer").style.display="flex"
 document.getElementById("viewer-img").src=url
+
 }
 
 function fecharViewer(){
@@ -400,6 +453,14 @@ let msgs=document.querySelectorAll(".bubble")
 msgs.forEach(m=>{
 m.style.display=m.innerText.toLowerCase().includes(t.toLowerCase())?"block":"none"
 })
+
+}
+
+function verGaleria(){
+
+let g=document.getElementById("gallery")
+
+g.style.display=g.style.display=="grid"?"none":"grid"
 
 }
 
@@ -417,7 +478,7 @@ if(m.mKey){
 
 let blob=await localforage.getItem("media_"+m.mKey)
 
-if(blob)zip.file(m.mKey,blob)
+if(blob) zip.file(m.mKey,blob)
 
 }
 
@@ -428,9 +489,7 @@ let blob=await zip.generateAsync({type:"blob"})
 let a=document.createElement("a")
 
 a.href=URL.createObjectURL(blob)
-
 a.download="conversa.zip"
-
 a.click()
 
 }
@@ -438,12 +497,19 @@ a.click()
 function limpar(){
 
 if(confirm("Apagar tudo?")){
-
 localforage.clear().then(()=>location.reload())
-
 }
 
 }
+
+document.body.addEventListener("dragover",e=>{
+e.preventDefault()
+})
+
+document.body.addEventListener("drop",e=>{
+e.preventDefault()
+importar(e.dataTransfer.files)
+})
 
 </script>
 

@@ -1,0 +1,42 @@
+name: Gerar APK WhatsView
+on:
+  push:
+    branches: [ main ] # O robô trabalha toda vez que você salva algo na branch main
+
+jobs:
+  android-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixando o código do repositório
+        uses: actions/checkout@v3
+
+      - name: Configurando o Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Instalando Capacitor e Android SDK
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          # Inicializa o app. 'com.whatsview.app' é o ID interno dele.
+          npx cap init WhatsView com.whatsview.app --web-dir .
+          npx cap add android
+
+      - name: Configurando o Java (Necessário para Android)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Compilando o APK
+        run: |
+          npx cap copy
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Disponibilizar APK para Download
+        uses: actions/upload-artifact@v3
+        with:
+          name: WhatsView-Instalador-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk

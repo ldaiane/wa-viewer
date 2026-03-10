@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>WhatsView iOS</title>
+<title>WhatsView</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
@@ -83,21 +83,14 @@ padding:8px 12px;
 border-radius:10px;
 font-size:14px;
 word-wrap:break-word;
-}
-
-.mine{
-background:#dcf8c6;
-align-self:flex-end;
-}
-
-.theirs{
-background:white;
+color:black;
 }
 
 .time{
 font-size:10px;
 opacity:.6;
 text-align:right;
+margin-top:3px;
 }
 
 .media img,.media video{
@@ -116,19 +109,6 @@ padding:4px 10px;
 border-radius:6px;
 font-size:12px;
 margin:8px 0;
-}
-
-#gallery{
-display:none;
-grid-template-columns:repeat(3,1fr);
-gap:2px;
-overflow:auto;
-}
-
-.gal{
-aspect-ratio:1/1;
-background-size:cover;
-background-position:center;
 }
 
 #search{
@@ -190,7 +170,6 @@ box-shadow:0 4px 12px rgba(0,0,0,.25);
 <div id="chat-title"></div>
 
 <div>
-<span onclick="verGaleria()">🖼</span>
 <span onclick="abrirArquivos()">➕</span>
 </div>
 
@@ -199,8 +178,6 @@ box-shadow:0 4px 12px rgba(0,0,0,.25);
 <input id="search" placeholder="Buscar..." oninput="buscar(this.value)">
 
 <div id="messages"></div>
-
-<div id="gallery"></div>
 
 </div>
 
@@ -216,6 +193,7 @@ let db=[]
 let chat=""
 let urlCache={}
 let msgIndex=new Set()
+let senderColors={}
 
 let page=0
 let pageSize=120
@@ -232,6 +210,23 @@ msgIndex.add(id)
 renderChats()
 })
 
+function corRemetente(nome){
+
+if(senderColors[nome]) return senderColors[nome]
+
+let cores=[
+"#dcf8c6","#ffffff","#ffdede","#e7ddff",
+"#d9f5ff","#fff5d9","#f0e6ff","#ffe8cc"
+]
+
+let cor=cores[Object.keys(senderColors).length % cores.length]
+
+senderColors[nome]=cor
+
+return cor
+
+}
+
 function novaConversa(){
 
 let nome=prompt("Nome da conversa")
@@ -246,6 +241,7 @@ chat=nome
 page=0
 
 document.getElementById("chat-title").innerText=nome
+
 document.getElementById("chat").style.display="flex"
 
 document.getElementById("messages").innerHTML=""
@@ -364,7 +360,7 @@ db.push({
 
 ts:Date.now(),
 sender:"Arquivo",
-msg:"",
+msg:nome,
 grupo:chat,
 mKey:nome
 
@@ -415,9 +411,7 @@ loading=true
 let area=document.getElementById("messages")
 
 let msgs=db.filter(x=>x.grupo==chat)
-
 .slice().reverse()
-
 .slice(page*pageSize,(page+1)*pageSize)
 
 msgs.reverse()
@@ -444,9 +438,9 @@ ultima=data
 
 let div=document.createElement("div")
 
-let mine=m.sender.includes("Você")
+div.className="bubble"
 
-div.className="bubble "+(mine?"mine":"theirs")
+div.style.background=corRemetente(m.sender)
 
 let media=""
 
@@ -484,7 +478,7 @@ media=`<audio controls src="${url}"></audio>`
 
 let hora=new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
 
-div.innerHTML=`${media}<div>${m.msg}</div><div class="time">${hora}</div>`
+div.innerHTML=`<b>${m.sender}</b><div>${media}${m.msg}</div><div class="time">${data} ${hora}</div>`
 
 area.appendChild(div)
 
@@ -551,14 +545,6 @@ document.querySelectorAll(".bubble").forEach(m=>{
 m.style.display=m.innerText.toLowerCase().includes(t.toLowerCase())?"block":"none"
 
 })
-
-}
-
-function verGaleria(){
-
-let g=document.getElementById("gallery")
-
-g.style.display=g.style.display=="grid"?"none":"grid"
 
 }
 

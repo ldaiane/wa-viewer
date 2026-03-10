@@ -5,199 +5,145 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#007aff">
     <link rel="manifest" href="manifest.json">
-    <title>WhatsView</title>
+    <title>WhatsView GitHub</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <style>
         :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
         html, body { position: fixed; width: 100%; height: 100%; overflow: hidden; margin: 0; font-family: -apple-system, system-ui, sans-serif; background: #fff; }
-        
-        header, .chat-header { 
-            height: 50px; background: rgba(249, 249, 249, 0.94); backdrop-filter: blur(20px); 
-            display: flex; justify-content: space-between; align-items: center; padding: 0 16px; 
-            border-bottom: 0.5px solid #ccc; z-index: 100; 
-        }
-
-        #home-view { height: calc(100% - 50px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        .chat-list-item { padding: 15px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; background: #fff; }
-
+        header { height: 50px; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 0.5px solid #ccc; z-index: 100; }
+        #home-view { height: calc(100% - 50px); overflow-y: auto; -webkit-overflow-scrolling: touch; background: #fff; }
+        .chat-list-item { padding: 15px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; cursor: pointer; }
         #chat-view { display: none; position: fixed; inset: 0; background: var(--ios-bg); flex-direction: column; z-index: 200; }
-        .nav-tabs { display: flex; background: #f9f9f9; padding: 8px; border-bottom: 0.5px solid #ccc; justify-content: center; }
-        .tab-btn { border: none; padding: 6px 20px; font-size: 13px; background: #e5e5ea; cursor: pointer; }
-        .tab-btn.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold; }
-        
         .content-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: flex; flex-direction: column; }
-
-        .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 10px; font-size: 14px; position: relative; line-height: 1.4; }
-        .bubble.mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .bubble.theirs { align-self: flex-start; border-bottom-left-radius: 4px; color: #000; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        
-        /* ETIQUETA DE ORIGEM */
-        .origin-label { 
-            font-size: 9px; font-weight: 800; text-transform: uppercase; 
-            display: block; margin-bottom: 4px; opacity: 0.7; letter-spacing: 0.5px;
-        }
-        .bubble.theirs .origin-label { color: var(--ios-blue); }
-        .bubble.mine .origin-label { color: rgba(255,255,255,0.9); }
-
-        .sender-name { font-size: 11px; font-weight: bold; margin-bottom: 2px; margin-left: 5px; }
-        .meta { font-size: 9px; opacity: 0.6; text-align: right; margin-top: 5px; }
-
-        .chat-media { margin: 5px 0; border-radius: 10px; overflow: hidden; max-width: 100%; }
-        .chat-media img, .chat-media video { width: 100%; height: auto; display: block; max-height: 200px; object-fit: contain; }
-        audio { width: 100%; height: 35px; margin-top: 5px; }
-
+        .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 10px; font-size: 14px; position: relative; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .theirs { background: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .origin-tag { font-size: 9px; font-weight: 800; display: block; margin-bottom: 4px; opacity: 0.7; text-transform: uppercase; }
+        .mine .origin-tag { color: rgba(255,255,255,0.9); }
+        .theirs .origin-tag { color: var(--ios-blue); }
+        .meta { font-size: 9px; opacity: 0.5; text-align: right; margin-top: 5px; }
         .fab { position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; border: none; font-size: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 300; }
+        .chat-media img { max-width: 100%; border-radius: 10px; margin-top: 5px; }
     </style>
 </head>
-<body oncontextmenu="return false;">
+<body>
 
 <header>
-    <div style="color:var(--ios-blue); cursor:pointer;" onclick="resetApp()">Limpar</div>
+    <div style="color:var(--ios-blue); font-size:14px;" onclick="resetApp()">Limpar</div>
     <div style="font-weight:bold;">WhatsView</div>
-    <div id="installBtn" style="display:none; color:var(--ios-blue); font-weight:bold;">INSTALAR</div>
+    <div id="installBtn" style="display:none; color:var(--ios-blue); font-weight:bold; font-size:12px;">INSTALAR</div>
 </header>
 
 <div id="home-view"></div>
 
 <div id="chat-view">
-    <div class="chat-header">
-        <button style="color:var(--ios-blue); background:none; border:none; font-size:16px;" onclick="confirmExit()">❮ Voltar</button>
-        <div id="chat-title" style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:150px;"></div>
-        <div style="width:50px;"></div>
-    </div>
-    <div class="nav-tabs">
-        <button id="tab-msg" class="tab-btn active" onclick="setTab('msg')">Chat</button>
-        <button id="tab-gal" class="tab-btn" onclick="setTab('gal')">Mídias</button>
-    </div>
+    <header>
+        <div style="color:var(--ios-blue);" onclick="closeChat()">❮ Voltar</div>
+        <div id="chat-title" style="font-weight:bold;"></div>
+        <div style="width:40px;"></div>
+    </header>
     <div id="msg-container" class="content-area"></div>
-    <div id="internal-gal" class="content-area" style="display:none; grid-template-columns: repeat(3, 1fr); gap: 2px;"></div>
 </div>
 
 <button class="fab" onclick="document.getElementById('fileInput').click()">+</button>
-<input type="file" id="fileInput" multiple webkitdirectory directory style="display:none" onchange="processFiles(this.files)">
+<input type="file" id="fileInput" multiple accept=".zip,.txt" style="display:none" onchange="handleFiles(this.files)">
 
 <script>
-    // Registro do PWA
+    // PWA Service Worker
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 
-    let dbMsgs = [];
-    const mediaCache = new Map();
+    let db = [];
+    const mediaMap = new Map();
 
-    async function processFiles(files) {
-        alert("Importando dados...");
-        const fileArray = Array.from(files);
-        
-        // Mapeia mídias usando Blob URLs (mais leve para o celular)
-        fileArray.forEach(f => {
-            if (!f.name.endsWith('.txt')) {
-                mediaCache.set(f.name, URL.createObjectURL(f));
-            }
-        });
-
-        for (let f of fileArray) {
-            if (f.name.endsWith('.txt')) {
-                const content = await f.text();
-                const fileName = f.name.replace('.txt', '');
-                const lines = content.split('\n');
-                
-                lines.forEach(line => {
-                    const match = line.match(/^(\d{2}\/\d{2}\/\d{4})[ ,](\d{2}:\d{2}) - (.*?): (.*)$/);
-                    if (match) {
-                        const [, date, time, sender, msg] = match;
-                        let foundMedia = null;
-                        for (let [name, url] of mediaCache) {
-                            if (msg.includes(name)) { foundMedia = { url, name }; break; }
-                        }
-                        dbMsgs.push({ date, time, sender, text: msg, media: foundMedia, source: fileName, originFile: f.name });
+    async function handleFiles(files) {
+        alert("Processando... Aguarde.");
+        for (let file of files) {
+            if (file.name.endsWith('.zip')) {
+                const zip = await JSZip.loadAsync(file);
+                for (let filename in zip.files) {
+                    const entry = zip.files[filename];
+                    if (filename.endsWith('.txt')) {
+                        const text = await entry.async("string");
+                        parseText(text, filename);
+                    } else if (!entry.dir) {
+                        const blob = await entry.async("blob");
+                        mediaMap.set(filename, URL.createObjectURL(blob));
                     }
-                });
+                }
+            } else if (file.name.endsWith('.txt')) {
+                const text = await file.text();
+                parseText(text, file.name);
             }
         }
-        await localforage.setItem('wv_data', dbMsgs);
+        await localforage.setItem('wv_store', db);
         renderHome();
-        alert("Processamento concluído!");
+        alert("Concluído!");
+    }
+
+    function parseText(content, origin) {
+        const lines = content.split('\n');
+        const source = origin.replace('.txt', '');
+        lines.forEach(line => {
+            const m = line.match(/^(\d{2}\/\d{2}\/\d{4})[ ,](\d{2}:\d{2}) - (.*?): (.*)$/);
+            if (m) {
+                const [, date, time, sender, text] = m;
+                let mediaUrl = null;
+                // Busca simples de mídia
+                mediaMap.forEach((url, name) => { if(text.includes(name)) mediaUrl = url; });
+                db.push({ date, time, sender, text, source, origin, mediaUrl });
+            }
+        });
     }
 
     function renderHome() {
-        const container = document.getElementById('home-view');
-        container.innerHTML = '';
-        const groups = [...new Set(dbMsgs.map(m => m.source))];
+        const home = document.getElementById('home-view');
+        home.innerHTML = '';
+        const groups = [...new Set(db.map(m => m.source))];
         groups.forEach(g => {
             const div = document.createElement('div');
             div.className = 'chat-list-item';
             div.onclick = () => openChat(g);
-            div.innerHTML = `<div style="width:45px; height:45px; background:var(--ios-blue); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">${g[0]}</div>
+            div.innerHTML = `<div style="width:40px; height:40px; background:var(--ios-blue); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold;">${g[0]}</div>
                              <div style="font-weight:600;">${g}</div>`;
-            container.appendChild(div);
+            home.appendChild(div);
         });
     }
 
-    function openChat(source) {
+    function openChat(s) {
         const container = document.getElementById('msg-container');
-        const gal = document.getElementById('internal-gal');
-        container.innerHTML = ''; gal.innerHTML = '';
-        document.getElementById('chat-title').innerText = source;
-
-        dbMsgs.filter(m => m.source === source).forEach(m => {
+        container.innerHTML = '';
+        document.getElementById('chat-title').innerText = s;
+        db.filter(m => m.source === s).forEach(m => {
             const isMine = m.sender.includes("Você") || m.sender.includes("Me");
-            const color = getColors(m.sender);
-            const wrap = document.createElement('div');
-            wrap.style.display = 'flex'; wrap.style.flexDirection = 'column';
-
-            if (!isMine) wrap.innerHTML += `<div class="sender-name" style="color:${color.text}">${m.sender}</div>`;
-
-            const bubble = document.createElement('div');
-            bubble.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
-            if (!isMine) bubble.style.background = color.bg;
-
-            let mediaHtml = '';
-            if (m.media) {
-                const ext = m.media.name.split('.').pop().toLowerCase();
-                if (['jpg','png','jpeg','webp'].includes(ext)) {
-                    mediaHtml = `<div class="chat-media"><img src="${m.media.url}"></div>`;
-                    const gImg = document.createElement('img'); gImg.src = m.media.url; 
-                    gImg.style.width = '100%'; gImg.style.aspectRatio = '1'; gImg.style.objectFit = 'cover';
-                    gal.appendChild(gImg);
-                } else if (['mp4','mov'].includes(ext)) {
-                    mediaHtml = `<div class="chat-media"><video controls playsinline src="${m.media.url}"></video></div>`;
-                } else if (['mp3','opus','ogg'].includes(ext)) {
-                    mediaHtml = `<audio controls src="${m.media.url}"></audio>`;
-                }
-            }
-
-            // INSERÇÃO DA ORIGEM NO BALÃO
-            bubble.innerHTML = `
-                <span class="origin-label">📂 ${m.originFile}</span>
-                ${mediaHtml}
+            const div = document.createElement('div');
+            div.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
+            div.innerHTML = `
+                <span class="origin-tag">📂 ${m.origin}</span>
+                <div style="font-weight:bold; font-size:11px; margin-bottom:2px;">${m.sender}</div>
+                ${m.mediaUrl ? `<div class="chat-media"><img src="${m.mediaUrl}"></div>` : ''}
                 <div style="word-break:break-word;">${m.text}</div>
                 <div class="meta">${m.date} ${m.time}</div>
             `;
-            
-            wrap.appendChild(bubble);
-            container.appendChild(wrap);
+            container.appendChild(div);
         });
-
         document.getElementById('chat-view').style.display = 'flex';
         container.scrollTop = container.scrollHeight;
     }
 
-    function setTab(t) {
-        document.getElementById('msg-container').style.display = t === 'msg' ? 'flex' : 'none';
-        document.getElementById('internal-gal').style.display = t === 'gal' ? 'grid' : 'none';
-        document.getElementById('tab-msg').classList.toggle('active', t === 'msg');
-        document.getElementById('tab-gal').classList.toggle('active', t === 'gal');
-    }
+    function closeChat() { document.getElementById('chat-view').style.display = 'none'; }
+    function resetApp() { if(confirm("Apagar tudo?")) { localforage.clear(); location.reload(); } }
+    localforage.getItem('wv_store').then(data => { if(data) { db = data; renderHome(); } });
 
-    function confirmExit() { if(confirm("Deseja fechar esta conversa?")) document.getElementById('chat-view').style.display = 'none'; }
-    
-    function getColors(n) {
-        let h = 0; for(let i=0; i<n.length; i++) h = n.charCodeAt(i) + ((h << 5) - h);
-        const hue = Math.abs(h % 360);
-        return { text: `hsl(${hue}, 70%, 30%)`, bg: `hsl(${hue}, 70%, 93%)` };
-    }
-
-    async function resetApp() { if(confirm("Apagar todos os dados importados?")) { await localforage.clear(); location.reload(); } }
-    localforage.getItem('wv_data').then(d => { if(d) { dbMsgs = d; renderHome(); } });
+    // Lógica do botão Instalar
+    let defPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault(); defPrompt = e;
+        document.getElementById('installBtn').style.display = 'block';
+    });
+    document.getElementById('installBtn').onclick = async () => {
+        if(defPrompt) { defPrompt.prompt(); defPrompt = null; }
+    };
 </script>
 </body>
 </html>

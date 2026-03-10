@@ -12,15 +12,25 @@
 
 <style>
 
+:root{
+--bg:#f2f2f7;
+--card:#ffffff;
+--ios-blue:#007aff;
+--text:#111;
+--bubble-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
 body{
 margin:0;
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial;
-background:#f2f2f7;
+font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial;
+background:var(--bg);
 height:100vh;
-overflow:hidden;
 display:flex;
 flex-direction:column;
+overflow:hidden;
 }
+
+/* HEADER */
 
 header{
 height:60px;
@@ -28,10 +38,34 @@ display:flex;
 align-items:center;
 justify-content:space-between;
 padding:0 16px;
-background:white;
-border-bottom:1px solid #ddd;
+background:rgba(255,255,255,.85);
+backdrop-filter:blur(20px);
+border-bottom:1px solid #e5e5ea;
 font-weight:600;
 }
+
+/* TABS */
+
+#tabs{
+display:flex;
+background:white;
+border-bottom:1px solid #eee;
+}
+
+.tab{
+flex:1;
+text-align:center;
+padding:12px;
+cursor:pointer;
+font-weight:600;
+}
+
+.tab.active{
+color:var(--ios-blue);
+border-bottom:2px solid var(--ios-blue);
+}
+
+/* CHAT LIST */
 
 #chat-list{
 flex:1;
@@ -42,17 +76,21 @@ overflow:auto;
 display:flex;
 align-items:center;
 gap:12px;
-padding:14px;
+padding:14px 16px;
 border-bottom:1px solid #eee;
-cursor:pointer;
 background:white;
+cursor:pointer;
+}
+
+.chat-row:hover{
+background:#f7f7f7;
 }
 
 .avatar{
-width:44px;
-height:44px;
+width:46px;
+height:46px;
 border-radius:50%;
-background:#34c759;
+background:linear-gradient(135deg,#007aff,#34c759);
 color:white;
 display:flex;
 align-items:center;
@@ -60,11 +98,13 @@ justify-content:center;
 font-weight:600;
 }
 
+/* CHAT VIEW */
+
 #chat{
-display:none;
 position:fixed;
 inset:0;
 background:#e5ddd5;
+display:none;
 flex-direction:column;
 }
 
@@ -73,77 +113,105 @@ flex:1;
 overflow:auto;
 display:flex;
 flex-direction:column;
-padding:10px;
-gap:6px;
+gap:8px;
+padding:12px;
 }
 
 .bubble{
-max-width:78%;
-padding:8px 12px;
-border-radius:10px;
+max-width:75%;
+padding:10px 14px;
+border-radius:18px;
+box-shadow:var(--bubble-shadow);
 font-size:14px;
-word-wrap:break-word;
-color:black;
 }
 
 .time{
 font-size:10px;
 opacity:.6;
+margin-top:4px;
 text-align:right;
-margin-top:3px;
-}
-
-.media img,.media video{
-max-width:100%;
-border-radius:6px;
-}
-
-audio{
-width:200px;
 }
 
 .date{
 align-self:center;
-background:#e1f3fb;
+background:#ddd;
 padding:4px 10px;
-border-radius:6px;
+border-radius:8px;
 font-size:12px;
-margin:8px 0;
 }
 
-#search{
-border:none;
-padding:10px;
-border-bottom:1px solid #ccc;
-outline:none;
+/* MEDIA */
+
+.media img,
+.media video{
+max-width:100%;
+border-radius:12px;
+margin-top:6px;
 }
 
-.full{
+/* GALERIA */
+
+#galeria{
+flex:1;
+overflow:auto;
+display:none;
+padding:6px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+gap:6px;
+}
+
+.grid div{
+aspect-ratio:1;
+overflow:hidden;
+border-radius:12px;
+background:#ddd;
+}
+
+.grid img,
+.grid video{
+width:100%;
+height:100%;
+object-fit:cover;
+cursor:pointer;
+}
+
+/* FULLSCREEN */
+
+.viewer{
 position:fixed;
 inset:0;
 background:black;
 display:none;
 align-items:center;
 justify-content:center;
+z-index:50;
 }
 
-.full img{
+.viewer img,
+.viewer video{
 max-width:100%;
 max-height:100%;
 }
 
+/* FLOAT BUTTON */
+
 .fab{
 position:fixed;
-right:20px;
 bottom:20px;
-width:56px;
-height:56px;
+right:20px;
+width:58px;
+height:58px;
 border:none;
 border-radius:50%;
 background:#25d366;
 color:white;
-font-size:26px;
-box-shadow:0 4px 12px rgba(0,0,0,.25);
+font-size:28px;
+box-shadow:0 6px 16px rgba(0,0,0,.25);
+cursor:pointer;
 }
 
 </style>
@@ -157,32 +225,34 @@ box-shadow:0 4px 12px rgba(0,0,0,.25);
 <div onclick="exportar()">Exportar</div>
 </header>
 
+<div id="tabs">
+<div class="tab active" onclick="abrirTab('chats')">Chats</div>
+<div class="tab" onclick="abrirTab('galeria')">Galeria</div>
+</div>
+
 <div id="chat-list"></div>
 
-<button class="fab" onclick="novaConversa()">+</button>
+<div id="galeria">
+<div class="grid" id="gridMidia"></div>
+</div>
+
+<button class="fab" onclick="abrirArquivos()">+</button>
 
 <div id="chat">
 
 <header>
-
 <div onclick="fechar()">❮</div>
-
 <div id="chat-title"></div>
-
-<div>
-<span onclick="abrirArquivos()">➕</span>
-</div>
-
+<div onclick="abrirArquivos()">📎</div>
 </header>
-
-<input id="search" placeholder="Buscar..." oninput="buscar(this.value)">
 
 <div id="messages"></div>
 
 </div>
 
-<div class="full" id="viewer" onclick="fecharViewer()">
+<div class="viewer" id="viewer" onclick="fecharViewer()">
 <img id="viewer-img">
+<video id="viewer-video" controls></video>
 </div>
 
 <input type="file" id="files" multiple webkitdirectory directory hidden>
@@ -193,60 +263,71 @@ let db=[]
 let chat=""
 let urlCache={}
 let msgIndex=new Set()
-let senderColors={}
-
-let page=0
-let pageSize=120
-let loading=false
 
 localforage.getItem("db").then(d=>{
 if(d){
 db=d
-db.forEach(m=>{
-let id=m.ts+"_"+m.sender+"_"+m.msg
-msgIndex.add(id)
+d.forEach(m=>{
+msgIndex.add(m.ts+"_"+m.sender+"_"+m.msg)
 })
 }
 renderChats()
 })
 
-function corRemetente(nome){
+function abrirTab(tab){
 
-if(senderColors[nome]) return senderColors[nome]
+document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
 
-let cores=[
-"#dcf8c6","#ffffff","#ffdede","#e7ddff",
-"#d9f5ff","#fff5d9","#f0e6ff","#ffe8cc"
-]
+if(tab=="chats"){
 
-let cor=cores[Object.keys(senderColors).length % cores.length]
+document.querySelectorAll(".tab")[0].classList.add("active")
+document.getElementById("chat-list").style.display="block"
+document.getElementById("galeria").style.display="none"
 
-senderColors[nome]=cor
+}else{
 
-return cor
+document.querySelectorAll(".tab")[1].classList.add("active")
+document.getElementById("chat-list").style.display="none"
+document.getElementById("galeria").style.display="block"
+
+renderGaleria()
 
 }
 
-function novaConversa(){
+}
 
-let nome=prompt("Nome da conversa")
+function renderChats(){
 
-if(nome) abrir(nome)
+let area=document.getElementById("chat-list")
+
+area.innerHTML=""
+
+let chats=[...new Set(db.map(x=>x.grupo))]
+
+for(let c of chats){
+
+let d=document.createElement("div")
+
+d.className="chat-row"
+
+d.innerHTML=`<div class="avatar">${c[0]}</div><div>${c}</div>`
+
+d.onclick=()=>abrir(c)
+
+area.appendChild(d)
+
+}
 
 }
 
 function abrir(nome){
 
 chat=nome
-page=0
 
 document.getElementById("chat-title").innerText=nome
-
 document.getElementById("chat").style.display="flex"
 
-document.getElementById("messages").innerHTML=""
-
-carregarMais()
+renderChat()
 
 }
 
@@ -256,42 +337,147 @@ document.getElementById("chat").style.display="none"
 
 }
 
+function renderChat(){
+
+let area=document.getElementById("messages")
+
+area.innerHTML=""
+
+let msgs=db.filter(m=>m.grupo==chat)
+
+let ultima=""
+
+msgs.forEach(async m=>{
+
+let data=new Date(m.ts).toLocaleDateString()
+
+if(data!=ultima){
+
+let d=document.createElement("div")
+d.className="date"
+d.innerText=data
+
+area.appendChild(d)
+
+ultima=data
+
+}
+
+let div=document.createElement("div")
+
+div.className="bubble"
+
+let media=""
+
+if(m.mKey){
+
+let blob=await localforage.getItem("media_"+m.mKey)
+
+if(blob){
+
+let url=URL.createObjectURL(blob)
+
+if(m.mKey.match(/\.(jpg|png|jpeg|webp|gif)/i)){
+
+media=`<div class="media"><img src="${url}" onclick="verImagem('${url}')"></div>`
+
+}
+
+if(m.mKey.match(/\.(mp4|mov|webm)/i)){
+
+media=`<div class="media"><video src="${url}" controls></video></div>`
+
+}
+
+}
+
+}
+
+let hora=new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+
+div.innerHTML=`<b>${m.sender}</b><div>${media}${m.msg}</div><div class="time">${hora}</div>`
+
+area.appendChild(div)
+
+})
+
+}
+
+function renderGaleria(){
+
+let area=document.getElementById("gridMidia")
+
+area.innerHTML=""
+
+let midias=db.filter(m=>m.mKey)
+
+midias.forEach(async m=>{
+
+let blob=await localforage.getItem("media_"+m.mKey)
+
+if(!blob)return
+
+let url=URL.createObjectURL(blob)
+
+let div=document.createElement("div")
+
+if(m.mKey.match(/\.(jpg|png|jpeg|webp|gif)/i)){
+
+div.innerHTML=`<img src="${url}">`
+
+div.onclick=()=>verImagem(url)
+
+}
+
+if(m.mKey.match(/\.(mp4|mov|webm)/i)){
+
+div.innerHTML=`<video src="${url}"></video>`
+
+div.onclick=()=>verVideo(url)
+
+}
+
+area.appendChild(div)
+
+})
+
+}
+
+function verImagem(url){
+
+document.getElementById("viewer").style.display="flex"
+document.getElementById("viewer-img").src=url
+document.getElementById("viewer-video").style.display="none"
+
+}
+
+function verVideo(url){
+
+document.getElementById("viewer").style.display="flex"
+
+let v=document.getElementById("viewer-video")
+
+v.src=url
+v.style.display="block"
+
+document.getElementById("viewer-img").style.display="none"
+
+}
+
+function fecharViewer(){
+
+document.getElementById("viewer").style.display="none"
+
+}
+
 function abrirArquivos(){
-
-let chats=[...new Set(db.map(x=>x.grupo))]
-
-let escolha=prompt(
-"Importar em:\n\n"+
-"1 - Chat atual\n"+
-"2 - Novo chat\n"+
-"3 - Escolher chat existente"
-)
-
-if(escolha=="2"){
-
-let nome=prompt("Nome do novo chat")
-if(nome) chat=nome
-
-}
-
-if(escolha=="3"){
-
-let lista=chats.join("\n")
-
-let nome=prompt("Digite o chat:\n\n"+lista)
-
-if(nome) chat=nome
-
-}
 
 document.getElementById("files").click()
 
 }
 
 document.getElementById("files").addEventListener("change",e=>{
-
 importar(e.target.files)
-
 })
 
 async function importar(files){
@@ -300,35 +486,13 @@ for(let file of files){
 
 if(file.name.endsWith(".zip")){
 
-await lerZip(file)
+let zip=await JSZip.loadAsync(file)
 
-}else{
-
-await salvar(file,file.name)
-
-}
-
-}
-
-db.sort((a,b)=>a.ts-b.ts)
-
-await localforage.setItem("db",db)
-
-renderChats()
-
-carregarMais()
-
-}
-
-async function lerZip(file){
-
-const zip=await JSZip.loadAsync(file)
-
-for(const path in zip.files){
+for(let path in zip.files){
 
 let entry=zip.files[path]
 
-if(entry.dir) continue
+if(entry.dir)continue
 
 if(path.endsWith(".txt")){
 
@@ -346,6 +510,18 @@ await salvar(blob,path)
 
 }
 
+}else{
+
+await salvar(file,file.name)
+
+}
+
+}
+
+await localforage.setItem("db",db)
+
+renderChats()
+
 }
 
 async function salvar(blob,nome){
@@ -357,13 +533,11 @@ if(await localforage.getItem(id)) return
 await localforage.setItem(id,blob)
 
 db.push({
-
 ts:Date.now(),
 sender:"Arquivo",
 msg:nome,
-grupo:chat,
+grupo:chat||"Importado",
 mKey:nome
-
 })
 
 }
@@ -372,7 +546,7 @@ function parseTexto(t){
 
 let linhas=t.split("\n")
 
-for(let l of linhas){
+linhas.forEach(l=>{
 
 let m=l.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s(\d{1,2}):(\d{2})\s-\s(.*?):\s([\s\S]*)$/)
 
@@ -384,167 +558,29 @@ let data=new Date(`${ano}-${m[2]}-${m[1]}T${m[4]}:${m[5]}`)
 
 let id=data.getTime()+"_"+m[6]+"_"+m[7]
 
-if(msgIndex.has(id)) continue
+if(msgIndex.has(id)) return
 
 msgIndex.add(id)
 
 db.push({
-
 ts:data.getTime(),
 sender:m[6],
 msg:m[7],
-grupo:chat
+grupo:chat||"Importado",
+mKey:m[7]
+})
+
+}
 
 })
 
 }
 
+function limpar(){
+
+if(confirm("Apagar tudo?")){
+localforage.clear().then(()=>location.reload())
 }
-
-}
-
-async function carregarMais(){
-
-if(loading) return
-loading=true
-
-let area=document.getElementById("messages")
-
-let msgs=db.filter(x=>x.grupo==chat)
-.slice().reverse()
-.slice(page*pageSize,(page+1)*pageSize)
-
-msgs.reverse()
-
-let ultima=""
-
-for(let m of msgs){
-
-let data=new Date(m.ts).toLocaleDateString()
-
-if(data!==ultima){
-
-let d=document.createElement("div")
-
-d.className="date"
-
-d.innerText=data
-
-area.appendChild(d)
-
-ultima=data
-
-}
-
-let div=document.createElement("div")
-
-div.className="bubble"
-
-div.style.background=corRemetente(m.sender)
-
-let media=""
-
-if(m.mKey){
-
-let blob=await localforage.getItem("media_"+m.mKey)
-
-if(blob){
-
-if(!urlCache[m.mKey]){
-
-urlCache[m.mKey]=URL.createObjectURL(blob)
-
-}
-
-let url=urlCache[m.mKey]
-
-let l=m.mKey.toLowerCase()
-
-if(l.match(/\.(jpg|jpeg|png|webp|gif)/))
-
-media=`<div class="media"><img src="${url}" onclick="ver('${url}')"></div>`
-
-else if(l.match(/\.(mp4|3gp|mov|mkv|webm)/))
-
-media=`<video controls src="${url}"></video>`
-
-else if(l.match(/\.(mp3|ogg|m4a|opus|aac|wav)/))
-
-media=`<audio controls src="${url}"></audio>`
-
-}
-
-}
-
-let hora=new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
-
-div.innerHTML=`<b>${m.sender}</b><div>${media}${m.msg}</div><div class="time">${data} ${hora}</div>`
-
-area.appendChild(div)
-
-}
-
-page++
-
-loading=false
-
-}
-
-document.getElementById("messages").addEventListener("scroll",e=>{
-
-if(e.target.scrollTop<100){
-
-carregarMais()
-
-}
-
-})
-
-function renderChats(){
-
-let h=document.getElementById("chat-list")
-
-h.innerHTML=""
-
-let chats=[...new Set(db.map(x=>x.grupo))]
-
-for(let c of chats){
-
-let d=document.createElement("div")
-
-d.className="chat-row"
-
-d.innerHTML=`<div class="avatar">${c[0]}</div><div>${c}</div>`
-
-d.onclick=()=>abrir(c)
-
-h.appendChild(d)
-
-}
-
-}
-
-function ver(url){
-
-document.getElementById("viewer").style.display="flex"
-
-document.getElementById("viewer-img").src=url
-
-}
-
-function fecharViewer(){
-
-document.getElementById("viewer").style.display="none"
-
-}
-
-function buscar(t){
-
-document.querySelectorAll(".bubble").forEach(m=>{
-
-m.style.display=m.innerText.toLowerCase().includes(t.toLowerCase())?"block":"none"
-
-})
 
 }
 
@@ -552,40 +588,17 @@ async function exportar(){
 
 let zip=new JSZip()
 
-let msgs=db.filter(x=>x.grupo==chat)
-
-zip.file("mensagens.json",JSON.stringify(msgs))
+zip.file("backup.json",JSON.stringify(db))
 
 let blob=await zip.generateAsync({type:"blob"})
 
 let a=document.createElement("a")
 
 a.href=URL.createObjectURL(blob)
-
-a.download="conversa.zip"
-
+a.download="backup.zip"
 a.click()
 
 }
-
-function limpar(){
-
-if(confirm("Apagar tudo?")){
-
-localforage.clear().then(()=>location.reload())
-
-}
-
-}
-
-document.body.addEventListener("dragover",e=>{
-e.preventDefault()
-})
-
-document.body.addEventListener("drop",e=>{
-e.preventDefault()
-importar(e.dataTransfer.files)
-})
 
 </script>
 

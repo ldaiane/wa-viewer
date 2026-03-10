@@ -5,23 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#007aff">
     <link rel="manifest" href="manifest.json">
-    <title>WhatsView Ultra</title>
+    <title>WhatsView Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <style>
         :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
-        html, body { position: fixed; width: 100%; height: 100%; overflow: hidden; margin: 0; font-family: -apple-system, system-ui, sans-serif; background: #fff; }
+        html, body { position: fixed; width: 100%; height: 100%; overflow: hidden; margin: 0; font-family: -apple-system, sans-serif; background: #fff; }
+        
         header { height: 50px; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 0.5px solid #ccc; z-index: 100; }
+        
+        /* BARRA DE BUSCA */
+        .search-container { padding: 8px 12px; background: #fff; border-bottom: 0.5px solid #ccc; }
+        #searchInput { width: 100%; padding: 8px 12px; border-radius: 10px; border: none; background: #e5e5ea; font-size: 14px; outline: none; box-sizing: border-box; }
+
         #home-view { height: calc(100% - 50px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .chat-list-item { padding: 15px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; }
+
         #chat-view { display: none; position: fixed; inset: 0; background: var(--ios-bg); flex-direction: column; z-index: 200; }
         .content-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: flex; flex-direction: column; }
+        
         .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 10px; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
         .mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; }
+        
         .origin-tag { font-size: 9px; font-weight: 800; display: block; margin-bottom: 4px; opacity: 0.7; text-transform: uppercase; border-bottom: 0.5px solid rgba(0,0,0,0.1); padding-bottom: 2px; }
-        .mine .origin-tag { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.2); }
         .theirs .origin-tag { color: var(--ios-blue); }
+        
         .meta { font-size: 9px; opacity: 0.5; text-align: right; margin-top: 5px; }
         .fab { position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; border: none; font-size: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 300; }
         .chat-media img { max-width: 100%; border-radius: 10px; margin-top: 5px; display: block; }
@@ -30,7 +39,7 @@
 <body>
 
 <header>
-    <div style="color:var(--ios-blue); font-size:14px; font-weight:bold;" onclick="resetApp()">LIMPAR TUDO</div>
+    <div style="color:var(--ios-blue); font-size:12px; font-weight:bold;" onclick="resetApp()">LIMPAR</div>
     <div style="font-weight:bold;">WhatsView</div>
     <div id="installBtn" style="display:none; color:var(--ios-blue); font-weight:bold; font-size:12px;">INSTALAR</div>
 </header>
@@ -40,9 +49,12 @@
 <div id="chat-view">
     <header>
         <div style="color:var(--ios-blue); font-weight:bold;" onclick="closeChat()">❮ VOLTAR</div>
-        <div id="chat-title" style="font-weight:bold; font-size:14px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+        <div id="chat-title" style="font-weight:bold; font-size:14px;"></div>
         <div style="width:40px;"></div>
     </header>
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Buscar na conversa..." oninput="filterMessages()">
+    </div>
     <div id="msg-container" class="content-area"></div>
 </div>
 
@@ -50,145 +62,95 @@
 <input type="file" id="fileInput" multiple webkitdirectory directory accept=".zip,.txt" style="display:none" onchange="handleFiles(this.files)">
 
 <script>
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
-
     let mainDb = [];
     const mediaStorage = new Map();
+    let currentGroup = "";
 
     async function handleFiles(files) {
-        alert("Iniciando processamento de " + files.length + " itens...");
-        
+        alert("Processando arquivos...");
         for (let file of Array.from(files)) {
-            // SE FOR ZIP
             if (file.name.toLowerCase().endsWith('.zip')) {
-                try {
-                    const zip = await JSZip.loadAsync(file);
-                    for (let filename in zip.files) {
-                        const entry = zip.files[filename];
-                        if (filename.endsWith('.txt')) {
-                            const text = await entry.async("string");
-                            processTextContent(text, filename);
-                        } else if (!entry.dir) {
-                            const blob = await entry.async("blob");
-                            mediaStorage.set(filename, URL.createObjectURL(blob));
-                        }
+                const zip = await JSZip.loadAsync(file);
+                for (let filename in zip.files) {
+                    const entry = zip.files[filename];
+                    if (filename.endsWith('.txt')) {
+                        const text = await entry.async("string");
+                        processText(text, filename);
+                    } else if (!entry.dir) {
+                        const blob = await entry.async("blob");
+                        mediaStorage.set(filename, URL.createObjectURL(blob));
                     }
-                } catch (e) { console.error("Erro no ZIP: ", file.name); }
-            } 
-            // SE FOR TXT AVULSO
-            else if (file.name.toLowerCase().endsWith('.txt')) {
+                }
+            } else if (file.name.toLowerCase().endsWith('.txt')) {
                 const text = await file.text();
-                processTextContent(text, file.name);
-            }
-            // SE FOR MÍDIA AVULSA (Imagens/Vídeos em pastas)
-            else {
-                mediaStorage.set(file.name, URL.createObjectURL(file));
+                processText(text, file.name);
             }
         }
-
-        await localforage.setItem('wv_data_v3', mainDb);
+        await localforage.setItem('wv_data_final', mainDb);
         renderHome();
-        alert("Arquivos carregados com sucesso!");
+        alert("Concluído!");
     }
 
-    function processTextContent(content, fileName) {
+    function processText(content, fileName) {
         const lines = content.split('\n');
-        const chatGroupName = fileName.replace('.txt', '');
-        
+        const group = fileName.replace('.txt', '');
         lines.forEach(line => {
-            // Regex ajustada para capturar data, hora, remetente e mensagem
             const match = line.match(/^(\d{2}\/\d{2}\/\d{4})[ ,](\d{2}:\d{2}) - (.*?): (.*)$/);
             if (match) {
                 const [, date, time, sender, text] = match;
-                let linkedMedia = null;
-                
-                // Vincular mídia se o nome do arquivo aparecer no texto
-                for (let [mName, mUrl] of mediaStorage) {
-                    if (text.includes(mName)) {
-                        linkedMedia = mUrl;
-                        break;
-                    }
-                }
-
-                mainDb.push({
-                    date, time, sender, text,
-                    group: chatGroupName,
-                    origin: fileName,
-                    media: linkedMedia
-                });
+                let media = null;
+                for (let [mName, mUrl] of mediaStorage) { if (text.includes(mName)) { media = mUrl; break; } }
+                mainDb.push({ date, time, sender, text, group, origin: fileName, media });
             }
         });
     }
 
     function renderHome() {
-        const home = document.getElementById('home-view');
-        home.innerHTML = '';
-        const uniqueGroups = [...new Set(mainDb.map(m => m.group))];
-        
-        uniqueGroups.forEach(g => {
+        const home = document.getElementById('home-view'); home.innerHTML = '';
+        const groups = [...new Set(mainDb.map(m => m.group))];
+        groups.forEach(g => {
             const div = document.createElement('div');
             div.className = 'chat-list-item';
             div.onclick = () => openChat(g);
-            div.innerHTML = `
-                <div style="width:40px; height:40px; background:var(--ios-blue); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px;">${g[0].toUpperCase()}</div>
-                <div style="font-weight:600; font-size:15px;">${g}</div>
-            `;
+            div.innerHTML = `<div style="width:40px; height:40px; background:var(--ios-blue); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold;">${g[0]}</div><div style="font-weight:600;">${g}</div>`;
             home.appendChild(div);
         });
     }
 
     function openChat(groupName) {
+        currentGroup = groupName;
+        document.getElementById('chat-title').innerText = groupName;
+        document.getElementById('searchInput').value = '';
+        renderMessages(mainDb.filter(m => m.group === groupName));
+        document.getElementById('chat-view').style.display = 'flex';
+    }
+
+    function renderMessages(msgs) {
         const container = document.getElementById('msg-container');
         container.innerHTML = '';
-        document.getElementById('chat-title').innerText = groupName;
-        
-        const messages = mainDb.filter(m => m.group === groupName);
-        messages.forEach(m => {
+        msgs.forEach(m => {
             const isMine = m.sender.includes("Você") || m.sender.includes("Me");
             const div = document.createElement('div');
             div.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
-            
-            div.innerHTML = `
-                <span class="origin-tag">📂 ${m.origin}</span>
-                <div style="font-weight:bold; font-size:11px; margin-bottom:3px; opacity:0.8;">${m.sender}</div>
-                ${m.media ? `<div class="chat-media"><img src="${m.media}" onclick="window.open('${m.media}')"></div>` : ''}
-                <div style="word-break:break-word; line-height:1.4;">${m.text}</div>
-                <div class="meta">${m.date} ${m.time}</div>
-            `;
+            div.innerHTML = `<span class="origin-tag">📂 ${m.origin}</span>
+                             <div style="font-weight:bold; font-size:11px; margin-bottom:2px;">${m.sender}</div>
+                             ${m.media ? `<img src="${m.media}" style="width:100%; border-radius:8px; margin:5px 0;">` : ''}
+                             <div>${m.text}</div><div class="meta">${m.date} ${m.time}</div>`;
             container.appendChild(div);
         });
-
-        document.getElementById('chat-view').style.display = 'flex';
         container.scrollTop = container.scrollHeight;
     }
 
-    function closeChat() { document.getElementById('chat-view').style.display = 'none'; }
-    
-    function resetApp() {
-        if(confirm("Isso apagará todas as mensagens salvas no seu celular. Deseja continuar?")) {
-            localforage.clear().then(() => location.reload());
-        }
+    function filterMessages() {
+        const term = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = mainDb.filter(m => m.group === currentGroup && m.text.toLowerCase().includes(term));
+        renderMessages(filtered);
     }
 
-    // Carregar dados salvos ao abrir
-    localforage.getItem('wv_data_v3').then(saved => {
-        if(saved) { mainDb = saved; renderHome(); }
-    });
-
-    // PWA: Botão Instalar
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        document.getElementById('installBtn').style.display = 'block';
-    });
-    document.getElementById('installBtn').onclick = () => {
-        if(deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt = null;
-            document.getElementById('installBtn').style.display = 'none';
-        }
-    };
+    function closeChat() { document.getElementById('chat-view').style.display = 'none'; }
+    function resetApp() { if(confirm("Apagar tudo?")) { localforage.clear().then(() => location.reload()); } }
+    
+    localforage.getItem('wv_data_final').then(saved => { if(saved) { mainDb = saved; renderHome(); } });
 </script>
 </body>
 </html>

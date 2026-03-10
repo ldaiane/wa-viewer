@@ -1,1 +1,27 @@
+body{
 
+font-family:Arial;
+background:#e5ddd5;
+
+}
+
+.msg{
+
+background:white;
+padding:8px;
+margin:5px;
+border-radius:5px;
+
+}
+
+img{
+
+max-width:200px;
+
+}
+
+video{
+
+max-width:250px;
+
+}

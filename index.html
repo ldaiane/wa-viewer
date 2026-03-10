@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
 
 <meta charset="UTF-8">
@@ -16,9 +15,9 @@ body{
 margin:0;
 font-family:-apple-system,Arial;
 background:#f2f2f7;
+height:100vh;
 display:flex;
 flex-direction:column;
-height:100vh;
 }
 
 header{
@@ -61,9 +60,16 @@ background:#e5ddd5;
 background:white;
 padding:8px 12px;
 border-radius:10px;
-margin-bottom:8px;
+margin-bottom:10px;
 max-width:80%;
 font-size:14px;
+}
+
+.time{
+font-size:11px;
+color:#777;
+margin-top:4px;
+text-align:right;
 }
 
 .media img,
@@ -170,6 +176,23 @@ renderChats()
 
 init()
 
+/* FORMATAR DATA */
+
+function formatTime(ts){
+
+let d=new Date(ts)
+
+let dia=d.getDate().toString().padStart(2,"0")
+let mes=(d.getMonth()+1).toString().padStart(2,"0")
+let ano=d.getFullYear()
+
+let h=d.getHours().toString().padStart(2,"0")
+let m=d.getMinutes().toString().padStart(2,"0")
+
+return `${dia}/${mes}/${ano} ${h}:${m}`
+
+}
+
 /* CHAT LIST */
 
 function renderChats(){
@@ -181,6 +204,7 @@ let chats=[...new Set(db.map(x=>x.chat))]
 chats.forEach(c=>{
 
 let d=document.createElement("div")
+
 d.className="chat"
 d.innerText=c
 
@@ -192,7 +216,7 @@ chatList.appendChild(d)
 
 }
 
-/* OPEN CHAT */
+/* ABRIR CHAT */
 
 function openChat(nome){
 
@@ -222,7 +246,10 @@ function renderChat(){
 
 msgs.innerHTML=""
 
-let mensagens=db.filter(x=>x.chat===currentChat).slice(-150)
+let mensagens=db
+.filter(x=>x.chat===currentChat)
+.sort((a,b)=>a.ts-b.ts)
+.slice(-150)
 
 mensagens.forEach(m=>{
 
@@ -250,7 +277,12 @@ media=`<audio src="${url}" controls></audio>`
 
 }
 
-div.innerHTML="<b>"+m.sender+"</b><br>"+m.text+media
+div.innerHTML=`
+<b>${m.sender}</b><br>
+${m.text}
+${media}
+<div class="time">${formatTime(m.ts)}</div>
+`
 
 msgs.appendChild(div)
 
@@ -279,9 +311,9 @@ let url=mediaFiles[k]
 let el=document.createElement("div")
 
 if(k.match(/mp4|webm|mov/))
-el.innerHTML="<video src='"+url+"'></video>"
+el.innerHTML=`<video src="${url}"></video>`
 else
-el.innerHTML="<img src='"+url+"'>"
+el.innerHTML=`<img src="${url}">`
 
 grid.appendChild(el)
 
@@ -297,15 +329,15 @@ chatList.style.display="block"
 
 }
 
-/* IMPORT FILES */
+/* IMPORTAR */
 
 fileInput.addEventListener("change",async e=>{
 
-for(let f of e.target.files){
+for(let file of e.target.files){
 
-if(f.name.endsWith(".zip")){
+if(file.name.endsWith(".zip")){
 
-let zip=await JSZip.loadAsync(f)
+let zip=await JSZip.loadAsync(file)
 
 for(let name in zip.files){
 
@@ -325,7 +357,8 @@ db.push({
 chat:"Backup WhatsApp",
 sender:"Arquivo",
 text:name,
-file:name
+file:name,
+ts:9999999999999
 })
 
 }
@@ -334,9 +367,9 @@ file:name
 
 }
 
-else if(f.name.endsWith(".txt")){
+else if(file.name.endsWith(".txt")){
 
-let txt=await f.text()
+let txt=await file.text()
 
 parseTxt(txt)
 
@@ -344,20 +377,23 @@ parseTxt(txt)
 
 else{
 
-let url=URL.createObjectURL(f)
+let url=URL.createObjectURL(file)
 
-mediaFiles[f.name]=url
+mediaFiles[file.name]=url
 
 db.push({
 chat:"Backup WhatsApp",
 sender:"Arquivo",
-text:f.name,
-file:f.name
+text:file.name,
+file:file.name,
+ts:Date.now()
 })
 
 }
 
 }
+
+db.sort((a,b)=>a.ts-b.ts)
 
 localStorage.setItem("db",JSON.stringify(db))
 
@@ -373,21 +409,30 @@ let linhas=t.split("\n")
 
 linhas.forEach(l=>{
 
-let m=l.match(/^(\d+\/\d+\/\d+).*?- (.*?): (.*)$/)
+let m=l.match(/^(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s?(\d{1,2}:\d{2}).*?- (.*?): (.*)$/)
 
 if(!m) return
 
+let d=m[1].split("/")
+
+let dia=d[0]
+let mes=d[1]
+let ano=d[2].length==2?"20"+d[2]:d[2]
+
+let hora=m[2].split(":")
+
+let ts=new Date(ano,mes-1,dia,hora[0],hora[1]).getTime()
+
 db.push({
 chat:"Backup WhatsApp",
-sender:m[2],
-text:m[3]
+sender:m[3],
+text:m[4],
+ts:ts
 })
 
 })
 
 }
-
-/* START */
 
 renderChats()
 

@@ -1,4 +1,4 @@
-name: Gerar APK com Icone Personalizado
+name: Gerar APK Final
 on:
   push:
     branches: [ main ]
@@ -7,44 +7,43 @@ jobs:
   android-build:
     runs-on: ubuntu-latest
     steps:
-      - name: Baixando o código do repositório
+      - name: Checkout Código
         uses: actions/checkout@v3
 
-      - name: Configurando o Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Instalando Capacitor e Ferramentas de Icone
+      - name: Instalar Ferramentas
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets
           npx cap init WhatsView com.whatsview.app --web-dir .
           npx cap add android
 
-      - name: Gerando Icones Automaticamente
+      - name: Gerar Ícones
         run: |
-          # Cria a pasta de recursos e gera os ícones a partir do seu icon.png
           mkdir -p resources
           cp icon.png resources/icon-only.png
           cp icon.png resources/icon-foreground.png
           cp icon.png resources/icon-background.png
           npx capacitor-assets generate --android
 
-      - name: Configurando o Java (JDK 17)
+      - name: Setup Java JDK 17
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Compilando o APK
+      - name: Build do APK
         run: |
           npx cap copy
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Disponibilizar APK para Download
+      - name: Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: WhatsView-Com-Icone
+          name: WhatsView-APK-Pronto
           path: android/app/build/outputs/apk/debug/app-debug.apk

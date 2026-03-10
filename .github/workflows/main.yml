@@ -1,7 +1,7 @@
-name: Gerar APK WhatsView
+name: Gerar APK com Icone Personalizado
 on:
   push:
-    branches: [ main ] # O robô trabalha toda vez que você salva algo na branch main
+    branches: [ main ]
 
 jobs:
   android-build:
@@ -15,14 +15,22 @@ jobs:
         with:
           node-version: 18
 
-      - name: Instalando Capacitor e Android SDK
+      - name: Instalando Capacitor e Ferramentas de Icone
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          # Inicializa o app. 'com.whatsview.app' é o ID interno dele.
+          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets
           npx cap init WhatsView com.whatsview.app --web-dir .
           npx cap add android
 
-      - name: Configurando o Java (Necessário para Android)
+      - name: Gerando Icones Automaticamente
+        run: |
+          # Cria a pasta de recursos e gera os ícones a partir do seu icon.png
+          mkdir -p resources
+          cp icon.png resources/icon-only.png
+          cp icon.png resources/icon-foreground.png
+          cp icon.png resources/icon-background.png
+          npx capacitor-assets generate --android
+
+      - name: Configurando o Java (JDK 17)
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
@@ -38,5 +46,5 @@ jobs:
       - name: Disponibilizar APK para Download
         uses: actions/upload-artifact@v3
         with:
-          name: WhatsView-Instalador-APK
+          name: WhatsView-Com-Icone
           path: android/app/build/outputs/apk/debug/app-debug.apk

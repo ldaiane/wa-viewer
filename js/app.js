@@ -1,44 +1,62 @@
-let currentChat = {messages:[]}
+let db=[]
+let chatAtual=""
 
-document.getElementById("importZip").addEventListener("change", async e => {
+localforage.getItem("db").then(d=>{
 
-const file = e.target.files[0]
+if(d) db=d
 
-await openZip(file)
-
-})
-
-document.getElementById("importFolder").addEventListener("change", e => {
-
-loadFolder(e.target.files)
+renderLista()
 
 })
 
-document.getElementById("addMediaBtn").onclick = ()=>{
+function renderLista(){
 
-document.getElementById("addMediaInput").click()
+let area=document.getElementById("chat-list")
+
+area.innerHTML=""
+
+let chats=[...new Set(db.map(x=>x.grupo))]
+
+chats.forEach(c=>{
+
+let row=document.createElement("div")
+
+row.className="chat-row"
+
+row.innerHTML=`
+
+<div class="avatar">${c[0]}</div>
+<div>${c}</div>
+`
+
+row.onclick=()=>abrirChat(c)
+
+area.appendChild(row)
+
+})
 
 }
 
-document.getElementById("addMediaInput").onchange = e => {
+function abrirChat(nome){
 
-const files = e.target.files
+chatAtual=nome
 
-for(let file of files){
+document.getElementById("home").style.display="none"
+document.getElementById("chat").style.display="block"
 
-currentChat.messages.push({
+document.getElementById("chat-name").innerText=nome
 
-sender:"arquivo",
-date:new Date(),
-text:"",
-media:file
+page=0
 
-})
+document.getElementById("messages").innerHTML=""
+
+carregarMais()
 
 }
 
-sortMessages()
+function voltar(){
 
-renderChat()
+document.getElementById("chat").style.display="none"
+document.getElementById("home").style.display="block"
 
 }

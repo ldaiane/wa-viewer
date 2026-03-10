@@ -9,32 +9,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <style>
         :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
-        html, body { position: fixed; width: 100%; height: 100%; overflow: hidden; margin: 0; font-family: -apple-system, sans-serif; background: #fff; }
-        header { height: 50px; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 0.5px solid #ccc; z-index: 100; }
-        .nav-tabs { display: flex; background: #fff; border-bottom: 0.5px solid #ccc; }
-        .tab { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: bold; color: #888; cursor: pointer; }
-        .tab.active { color: var(--ios-blue); border-bottom: 2px solid var(--ios-blue); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: -apple-system, sans-serif; background: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        #home-view { height: calc(100% - 50px); overflow-y: auto; }
-        .chat-list-item { padding: 15px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; }
-        
-        #chat-view { display: none; position: fixed; inset: 0; background: var(--ios-bg); flex-direction: column; z-index: 200; }
-        .content-area { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; }
-        
-        /* GALERIA */
-        #gallery-view { display: none; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; background: #fff; height: 100%; }
-        .gallery-item { aspect-ratio: 1/1; background-size: cover; background-position: center; border-radius: 4px; }
+        header { height: 60px; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 0.5px solid #ccc; flex-shrink: 0; }
+        .nav-tabs { display: flex; background: #fff; border-bottom: 0.5px solid #ccc; flex-shrink: 0; }
+        .tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: bold; color: #888; cursor: pointer; }
+        .tab.active { color: var(--ios-blue); border-bottom: 3px solid var(--ios-blue); }
 
-        /* BALÕES */
-        .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 12px; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
-        .mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .theirs { background: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .origin-badge { font-size: 9px; font-weight: 900; opacity: 0.7; display: block; margin-bottom: 4px; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
+        #home-view { flex: 1; overflow-y: auto; background: #fff; }
+        .chat-item { padding: 16px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; cursor: pointer; }
+        .avatar { width: 45px; height: 45px; background: var(--ios-blue); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+        #chat-view { display: none; position: fixed; inset: 0; background: var(--ios-bg); flex-direction: column; z-index: 200; }
+        .message-area { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
         
-        .media-container { margin-top: 8px; border-radius: 10px; overflow: hidden; }
-        img, video { max-width: 100%; display: block; }
-        audio { width: 100%; height: 35px; margin-top: 5px; }
-        .fab { position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; font-size: 30px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 300; }
+        /* BALÕES */
+        .bubble { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 14px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-wrap: break-word; }
+        .mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .theirs { background: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .origin-tag { font-size: 9px; opacity: 0.6; display: block; margin-bottom: 4px; font-weight: bold; text-transform: uppercase; border-bottom: 0.5px solid rgba(0,0,0,0.1); padding-bottom: 2px; }
+        
+        /* MÍDIAS */
+        .media-box { margin: 8px 0; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.05); }
+        img, video { max-width: 100%; display: block; height: auto; }
+        audio { width: 100%; height: 35px; }
+        .pdf-btn { display: block; padding: 10px; background: #fff; color: #000; text-decoration: none; border-radius: 8px; text-align: center; font-weight: bold; font-size: 12px; border: 1px solid #ddd; }
+
+        /* GALERIA */
+        #gallery-view { display: none; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; background: #fff; flex: 1; }
+        .gallery-thumb { aspect-ratio: 1/1; background-size: cover; background-position: center; border-radius: 4px; background-color: #eee; }
+
+        /* BOTÕES */
+        .fab { position: fixed; bottom: 25px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; border: none; font-size: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 300; display: flex; align-items: center; justify-content: center; }
+        .add-btn-inner { background: #e5e5ea; padding: 10px; text-align: center; font-weight: bold; color: var(--ios-blue); font-size: 13px; cursor: pointer; border-bottom: 0.5px solid #ccc; }
     </style>
 </head>
 <body>
@@ -50,144 +58,146 @@
 <div id="chat-view">
     <header>
         <div style="color:var(--ios-blue); font-weight:bold;" onclick="closeChat()">❮ VOLTAR</div>
-        <div id="chat-title" style="font-weight:bold; font-size:13px;"></div>
+        <div id="chat-title" style="font-weight:bold; font-size:14px;"></div>
         <div style="width:40px;"></div>
     </header>
     <div class="nav-tabs">
-        <div class="tab active" id="tab-chat" onclick="switchTab('chat')">CONVERSA</div>
-        <div class="tab" id="tab-gallery" onclick="switchTab('gallery')">GALERIA</div>
+        <div class="tab active" id="tab-msg" onclick="switchTab('msg')">CONVERSA</div>
+        <div class="tab" id="tab-gal" onclick="switchTab('gal')">GALERIA</div>
     </div>
-    
-    <div id="chat-content" class="content-area"></div>
-    <div id="gallery-view"></div>
+    <div class="add-btn-inner" onclick="triggerInput()">+ ADICIONAR ARQUIVOS NESTA CONVERSA</div>
+    <div id="message-container" class="message-area"></div>
+    <div id="gallery-container"></div>
 </div>
 
-<button class="fab" onclick="document.getElementById('fileInput').click()">+</button>
+<button id="main-fab" class="fab" onclick="triggerInput()">+</button>
 <input type="file" id="fileInput" multiple accept=".zip,.txt" style="display:none" onchange="handleFiles(this.files)">
 
 <script>
-    let mainDb = [];
-    let mediaStore = {}; // Objeto para guardar Blobs reais
-    let currentGroup = "";
+    let db = [];
+    let mediaCache = new Map();
+    let currentChat = "";
+
+    async function triggerInput() { document.getElementById('fileInput').click(); }
 
     async function handleFiles(files) {
-        alert("Processando mídias e logs...");
+        alert("Processando... Aguarde o aviso de conclusão.");
         for (let file of Array.from(files)) {
             if (file.name.endsWith('.zip')) {
                 const zip = await JSZip.loadAsync(file);
-                for (let filename in zip.files) {
-                    const entry = zip.files[filename];
-                    if (filename.endsWith('.txt')) {
-                        processText(await entry.async("string"), filename);
+                for (let path in zip.files) {
+                    const entry = zip.files[path];
+                    if (path.endsWith('.txt')) {
+                        await parseText(await entry.async("string"), path);
                     } else if (!entry.dir) {
                         const blob = await entry.async("blob");
-                        // Criamos uma URL interna que o APK consegue ler
-                        mediaStore[filename] = URL.createObjectURL(blob);
+                        mediaCache.set(path, URL.createObjectURL(blob));
                     }
                 }
             } else if (file.name.endsWith('.txt')) {
-                processText(await file.text(), file.name);
+                await parseText(await file.text(), file.name);
             }
         }
-        mainDb.sort((a, b) => a.timestamp - b.timestamp);
-        await localforage.setItem('wv_main_db', mainDb);
+        
+        // Ordenação e Limpeza
+        db.sort((a, b) => a.ts - b.ts);
+        db = Array.from(new Set(db.map(m => JSON.stringify(m)))).map(s => JSON.parse(s));
+        
+        await localforage.setItem('wv_v6_data', db);
         renderHome();
-        alert("Arquivos carregados!");
+        if(currentChat) openChat(currentChat);
+        alert("Arquivos adicionados com sucesso!");
     }
 
-    function processText(content, fileName) {
+    async function parseText(content, origin) {
+        const group = origin.replace('Conversa do WhatsApp com ', '').replace('.txt', '');
         const lines = content.split('\n');
-        const groupName = fileName.replace('Conversa do WhatsApp com ', '').replace('.txt', '');
         lines.forEach(line => {
             const match = line.match(/^(\d{2})\/(\d{2})\/(\d{4})[ ,](\d{2}):(\d{2}) - (.*?): (.*)$/);
             if (match) {
-                const [, day, month, year, hour, min, sender, text] = match;
-                const timestamp = new Date(year, month - 1, day, hour, min).getTime();
-                let foundMedia = null;
-                // Busca se o texto cita algum arquivo que temos no ZIP
-                for (let mName in mediaStore) {
-                    if (text.includes(mName)) { foundMedia = mName; break; }
-                }
-                mainDb.push({ date: `${day}/${month}/${year}`, time: `${hour}:${min}`, timestamp, sender, text, group: groupName, origin: fileName, mediaKey: foundMedia });
+                const [, d, m, y, h, min, sender, msg] = match;
+                const ts = new Date(y, m-1, d, h, min).getTime();
+                let mKey = null;
+                for (let k of mediaCache.keys()) { if (msg.includes(k)) { mKey = k; break; } }
+                db.push({ ts, date: `${d}/${m}/${y}`, time: `${h}:${min}`, sender, msg, group, origin, mKey });
             }
         });
     }
 
     function renderHome() {
-        const home = document.getElementById('home-view'); home.innerHTML = '';
-        const groups = [...new Set(mainDb.map(m => m.group))];
+        const view = document.getElementById('home-view'); view.innerHTML = '';
+        const groups = [...new Set(db.map(m => m.group))];
         groups.forEach(g => {
             const div = document.createElement('div');
-            div.className = 'chat-list-item';
+            div.className = 'chat-item';
             div.onclick = () => openChat(g);
-            div.innerHTML = `<div style="width:40px; height:40px; background:var(--ios-blue); border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold;">${g[0]}</div><div><b>${g}</b></div>`;
-            home.appendChild(div);
+            div.innerHTML = `<div class="avatar">${g[0].toUpperCase()}</div><div><b>${g}</b></div>`;
+            view.appendChild(div);
         });
     }
 
-    function openChat(groupName) {
-        currentGroup = groupName;
-        document.getElementById('chat-title').innerText = groupName;
+    function openChat(name) {
+        currentChat = name;
+        document.getElementById('chat-title').innerText = name;
         document.getElementById('chat-view').style.display = 'flex';
-        switchTab('chat');
+        document.getElementById('main-fab').style.display = 'none';
+        switchTab('msg');
     }
 
     function switchTab(type) {
-        const chatContent = document.getElementById('chat-content');
-        const galleryContent = document.getElementById('gallery-view');
+        const msgBox = document.getElementById('message-container');
+        const galBox = document.getElementById('gallery-container');
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
 
-        if (type === 'chat') {
-            document.getElementById('tab-chat').classList.add('active');
-            chatContent.style.display = 'flex';
-            galleryContent.style.display = 'none';
+        if (type === 'msg') {
+            document.getElementById('tab-msg').classList.add('active');
+            msgBox.style.display = 'flex'; galBox.style.display = 'none';
             renderMessages();
         } else {
-            document.getElementById('tab-gallery').classList.add('active');
-            chatContent.style.display = 'none';
-            galleryContent.style.display = 'grid';
+            document.getElementById('tab-gal').classList.add('active');
+            msgBox.style.display = 'none'; galBox.style.display = 'grid';
+            galBox.className = ''; galBox.id = 'gallery-view'; galBox.style.display = 'grid';
             renderGallery();
         }
     }
 
     function renderMessages() {
-        const container = document.getElementById('chat-content');
-        container.innerHTML = '';
-        mainDb.filter(m => m.group === currentGroup).forEach(m => {
-            const isMine = m.sender.toLowerCase().includes("você");
+        const container = document.getElementById('message-container'); container.innerHTML = '';
+        db.filter(m => m.group === currentChat).forEach(m => {
+            const mine = m.sender.toLowerCase().includes("você");
             const div = document.createElement('div');
-            div.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
+            div.className = `bubble ${mine ? 'mine' : 'theirs'}`;
             
-            let mediaHtml = '';
-            if (m.mediaKey) {
-                const url = mediaStore[m.mediaKey];
-                if (m.mediaKey.match(/\.(jpg|jpeg|png|webp)$/i)) mediaHtml = `<div class="media-container"><img src="${url}"></div>`;
-                else if (m.mediaKey.match(/\.(mp4|3gp)$/i)) mediaHtml = `<div class="media-container"><video controls src="${url}"></video></div>`;
-                else if (m.mediaKey.match(/\.(opus|mp3|m4a)$/i)) mediaHtml = `<audio controls src="${url}"></audio>`;
+            let mHtml = '';
+            if (m.mKey) {
+                const url = mediaCache.get(m.mKey);
+                if (m.mKey.match(/\.(jpg|jpeg|png|webp)$/i)) mHtml = `<div class="media-box"><img src="${url}"></div>`;
+                else if (m.mKey.match(/\.(mp4|3gp)$/i)) mHtml = `<div class="media-box"><video controls src="${url}"></video></div>`;
+                else if (m.mKey.match(/\.(opus|mp3|m4a)$/i)) mHtml = `<div class="media-box"><audio controls src="${url}"></audio></div>`;
+                else if (m.mKey.endsWith('.pdf')) mHtml = `<div class="media-box"><a href="${url}" class="pdf-btn" target="_blank">📄 PDF: ${m.mKey}</a></div>`;
             }
 
-            div.innerHTML = `<span class="origin-badge">📂 ${m.origin}</span><b>${m.sender}</b>${mediaHtml}<div>${m.text}</div><div style="font-size:9px; opacity:0.5; text-align:right;">${m.date} ${m.time}</div>`;
+            div.innerHTML = `<span class="origin-tag">📂 ${m.origin}</span><b>${m.sender}</b>${mHtml}<div>${m.msg}</div><div class="meta" style="font-size:9px; text-align:right; opacity:0.6; margin-top:4px;">${m.date} ${m.time}</div>`;
             container.appendChild(div);
         });
         container.scrollTop = container.scrollHeight;
     }
 
     function renderGallery() {
-        const container = document.getElementById('gallery-view');
-        container.innerHTML = '';
-        mainDb.filter(m => m.group === currentGroup && m.mediaKey).forEach(m => {
-            if (m.mediaKey.match(/\.(jpg|jpeg|png|webp)$/i)) {
+        const container = document.getElementById('gallery-view'); container.innerHTML = '';
+        db.filter(m => m.group === currentChat && m.mKey).forEach(m => {
+            if (m.mKey.match(/\.(jpg|jpeg|png|webp|mp4|3gp)$/i)) {
                 const div = document.createElement('div');
-                div.className = 'gallery-item';
-                div.style.backgroundImage = `url(${mediaStore[m.mediaKey]})`;
+                div.className = 'gallery-thumb';
+                div.style.backgroundImage = `url(${mediaCache.get(m.mKey)})`;
                 container.appendChild(div);
             }
         });
     }
 
-    function closeChat() { document.getElementById('chat-view').style.display = 'none'; }
-    function resetApp() { if(confirm("Limpar tudo?")) { localforage.clear().then(() => location.reload()); } }
-    localforage.getItem('wv_main_db').then(saved => { if(saved) { mainDb = saved; renderHome(); } });
+    function closeChat() { document.getElementById('chat-view').style.display = 'none'; document.getElementById('main-fab').style.display = 'flex'; currentChat = ""; }
+    function resetApp() { if(confirm("Apagar tudo?")) { localforage.clear().then(() => location.reload()); } }
+    localforage.getItem('wv_v6_data').then(s => { if(s) { db = s; renderHome(); } });
 </script>
 </body>
 </html>

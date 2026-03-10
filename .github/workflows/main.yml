@@ -15,11 +15,19 @@ jobs:
         with:
           node-version: 20
 
-      - name: Instalar Ferramentas
+      - name: Preparar Pastas e Instalar Ferramentas
         run: |
+          # Cria a pasta www que o Capacitor exige
+          mkdir -p www
+          # Copia seu site para dentro da pasta www
+          cp index.html www/
+          cp manifest.json www/ || true
+          cp sw.js www/ || true
+          
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets
-          # Removido o --force que causou o erro
-          npx cap init WhatsView com.whatsview.app --web-dir .
+          
+          # Inicializa apontando para a pasta www (agora sem o erro do ".")
+          npx cap init WhatsView com.whatsview.app --web-dir www
           npx cap add android || echo "Pasta Android já existe"
 
       - name: Gerar Ícones

@@ -29,7 +29,7 @@
         .theirs { background: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 2px; }
         .origin-tag { font-size: 9px; opacity: 0.6; display: block; margin-bottom: 4px; font-weight: bold; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
         
-        .media-box { margin: 8px 0; border-radius: 10px; overflow: hidden; background: #000; }
+        .media-box { margin: 8px 0; border-radius: 10px; overflow: hidden; background: #e5e5ea; }
         img, video { max-width: 100%; display: block; height: auto; margin: 0 auto; }
         audio { width: 100%; height: 40px; }
         .pdf-btn { display: block; padding: 12px; background: #fff; color: var(--ios-blue); text-decoration: none; border-radius: 8px; text-align: center; font-weight: bold; font-size: 12px; border: 1px solid var(--ios-blue); }
@@ -72,62 +72,95 @@
 <script>
     let db = [];
     let currentChat = "";
+    let matchedMediaKeys = new Set();
 
     async function triggerInput() { document.getElementById('fileInput').click(); }
 
-    // Função para converter arquivo em Base64 para persistência no APK
+    // Conversor com injeção forçada de formato para compatibilidade com WebView (APK)
     const toBase64 = file => new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
+        reader.onload = () => {
+            let b64 = reader.result;
+            const name = file.name.toLowerCase();
+            let mime = "";
+            
+            if (name.match(/\.(jpg|jpeg)$/)) mime = "image/jpeg";
+            else if (name.endsWith('.png')) mime = "image/png";
+            else if (name.endsWith('.webp')) mime = "image/webp";
+            else if (name.match(/\.(mp4|3gp)$/)) mime = "video/mp4";
+            else if (name.match(/\.(opus|ogg)$/)) mime = "audio/ogg"; // Crucial para áudio do WhatsApp
+            else if (name.match(/\.(mp3|m4a)$/)) mime = "audio/mpeg";
+            else if (name.endsWith('.pdf')) mime = "application/pdf";
+
+            if (mime) {
+                b64 = `data:${mime};base64,${b64.split(',')[1]}`;
+            }
+            resolve(b64);
+        };
         reader.onerror = error => reject(error);
     });
 
     async function handleFiles(files) {
-        alert("Lendo arquivos selecionados...");
+        alert("Processando arquivos...");
         const tempMediaStore = new Map();
         const textFiles = [];
+        matchedMediaKeys.clear();
 
-        // Primeiro passo: Separar o que é mídia e o que é texto
         for (let file of Array.from(files)) {
-            const ext = file.name.split('.pop').pop().toLowerCase();
-            
             if (file.name.endsWith('.txt')) {
                 textFiles.push({ name: file.name, content: await file.text() });
             } else if (file.name.endsWith('.zip')) {
-                // Se ainda quiserem subir ZIP, mantemos a lógica
                 const zip = await JSZip.loadAsync(file);
                 for (let path in zip.files) {
                     const entry = zip.files[path];
                     if (path.endsWith('.txt')) {
                         textFiles.push({ name: path, content: await entry.async("string") });
                     } else if (!entry.dir) {
-                        const base64 = await entry.async("base64");
-                        const mExt = path.split('.').pop().toLowerCase();
-                        let prefix = "data:image/png;base64,";
-                        if(mExt === 'mp4' || mExt === '3gp') prefix = "data:video/mp4;base64,";
-                        if(['opus', 'mp3', 'm4a', 'ogg'].includes(mExt)) prefix = "data:audio/mp3;base64,";
-                        if(mExt === 'pdf') prefix = "data:application/pdf;base64,";
-                        tempMediaStore.set(path, prefix + base64);
+                        let b64 = await entry.async("base64");
+                        const name = path.toLowerCase();
+                        let prefix = "data:application/octet-stream;base64,";
+                        if (name.match(/\.(jpg|jpeg)$/)) prefix = "data:image/jpeg;base64,";
+                        if (name.endsWith('.png')) prefix = "data:image/png;base64,";
+                        if (name.match(/\.(mp4|3gp)$/)) prefix = "data:video/mp4;base64,";
+                        if (name.match(/\.(opus|ogg)$/)) prefix = "data:audio/ogg;base64,";
+                        if (name.endsWith('.pdf')) prefix = "data:application/pdf;base64,";
+                        tempMediaStore.set(path, prefix + b64);
                     }
                 }
             } else {
-                // Arquivos soltos da pasta (fotos, áudios, etc)
                 const b64 = await toBase64(file);
                 tempMediaStore.set(file.name, b64);
             }
         }
 
-        // Segundo passo: Processar os textos e casar com as mídias
         for (let txt of textFiles) {
             await parseText(txt.content, txt.name, tempMediaStore);
         }
+
+        // Salva-vidas: Processar mídias que não estavam no .txt (Arquivos órfãos)
+        for (let [key, val] of tempMediaStore) {
+            if (!matchedMediaKeys.has(key)) {
+                const dateMatch = key.match(/(?:IMG|VID|AUD|PTT|DOC)-(\d{4})(\d{2})(\d{2})-WA/i);
+                let ts = Date.now(), d = "01", m = "01", y = "2000", h = "12", min = "00";
+                if (dateMatch) {
+                    y = dateMatch[1]; m = dateMatch[2]; d = dateMatch[3];
+                    ts = new Date(y, m-1, d, h, min).getTime();
+                }
+                
+                // Impede que o mesmo arquivo entre duplicado se já estiver no DB principal
+                const exists = db.some(x => x.mKey === key && x.group === (currentChat || "Desconhecido"));
+                if (!exists) {
+                    db.push({ ts, date: `${d}/${m}/${y}`, time: `${h}:${min}`, sender: "Mídia Anexada", msg: key, group: currentChat || "Desconhecido", origin: "Importação Direta", mKey: key, mediaData: val });
+                }
+            }
+        }
         
         db.sort((a, b) => a.ts - b.ts);
-        await localforage.setItem('wv_v8_folder', db);
+        await localforage.setItem('wv_v9_stable', db);
         renderHome();
         if(currentChat) renderMessages();
-        alert("Importação concluída com sucesso!");
+        alert("Arquivos adicionados e organizados!");
     }
 
     async function parseText(content, origin, mediaStore) {
@@ -139,19 +172,22 @@
             if (match) {
                 const [, d, m, y, h, min, sender, msg] = match;
                 const ts = new Date(y, m-1, d, h, min).getTime();
+                
+                // Limpeza de caracteres invisíveis do WhatsApp
+                const cleanMsg = msg.replace(/[\u200E\u200F\u202A-\u202E]/g, '');
+                
                 let mediaData = null;
                 let mKey = null;
 
-                // Tenta achar se o nome de algum arquivo de mídia está nesta linha
                 for (let [key, val] of mediaStore) {
-                    if (msg.includes(key)) {
+                    if (cleanMsg.includes(key)) {
                         mediaData = val;
                         mKey = key;
+                        matchedMediaKeys.add(key);
                         break;
                     }
                 }
                 
-                // Evita duplicatas
                 const isDup = db.some(x => x.ts === ts && x.msg === msg && x.group === group);
                 if(!isDup) {
                     db.push({ ts, date: `${d}/${m}/${y}`, time: `${h}:${min}`, sender, msg, group, origin, mKey, mediaData });
@@ -199,7 +235,7 @@
     function renderMessages() {
         const container = document.getElementById('message-container'); container.innerHTML = '';
         db.filter(m => m.group === currentChat).forEach(m => {
-            const mine = m.sender.toLowerCase().includes("você");
+            const mine = m.sender.toLowerCase().includes("você") || m.sender.toLowerCase().includes("me");
             const div = document.createElement('div');
             div.className = `bubble ${mine ? 'mine' : 'theirs'}`;
             
@@ -235,8 +271,8 @@
     }
 
     function closeChat() { document.getElementById('chat-view').style.display = 'none'; document.getElementById('main-fab').style.display = 'flex'; currentChat = ""; }
-    function resetApp() { if(confirm("Limpar tudo?")) { localforage.clear().then(() => location.reload()); } }
-    localforage.getItem('wv_v8_folder').then(s => { if(s) { db = s; renderHome(); } });
+    function resetApp() { if(confirm("Apagar todos os dados e resetar?")) { localforage.clear().then(() => location.reload()); } }
+    localforage.getItem('wv_v9_stable').then(s => { if(s) { db = s; renderHome(); } });
 </script>
 </body>
 </html>

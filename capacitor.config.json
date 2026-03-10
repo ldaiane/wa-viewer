@@ -1,0 +1,6 @@
+{
+  "appId": "com.whatsview.app",
+  "appName": "WhatsView",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}

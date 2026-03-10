@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 
 <html lang="pt-BR">
-
 <head>
 
 <meta charset="UTF-8">
@@ -9,61 +8,539 @@
 
 <title>WhatsView iOS</title>
 
-<link rel="stylesheet" href="style.css">
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+
+<style>
+
+body{
+margin:0;
+font-family:-apple-system;
+background:#f2f2f7;
+}
+
+header{
+height:60px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 16px;
+background:white;
+border-bottom:1px solid #ddd;
+font-weight:600;
+}
+
+#chat-list{
+height:calc(100vh - 60px);
+overflow:auto;
+}
+
+.chat-row{
+display:flex;
+align-items:center;
+gap:12px;
+padding:14px;
+border-bottom:1px solid #eee;
+cursor:pointer;
+background:white;
+}
+
+.avatar{
+width:44px;
+height:44px;
+border-radius:50%;
+background:#ccc;
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:bold;
+}
+
+#chat{
+display:none;
+position:fixed;
+inset:0;
+background:#e5ddd5;
+flex-direction:column;
+}
+
+#messages{
+flex:1;
+overflow:auto;
+display:flex;
+flex-direction:column;
+padding:10px;
+gap:6px;
+}
+
+.bubble{
+max-width:75%;
+padding:8px 12px;
+border-radius:10px;
+font-size:14px;
+}
+
+.mine{
+background:#dcf8c6;
+align-self:flex-end;
+}
+
+.theirs{
+background:white;
+}
+
+.time{
+font-size:10px;
+opacity:.6;
+text-align:right;
+}
+
+.media img,.media video{
+max-width:100%;
+border-radius:6px;
+}
+
+audio{
+width:180px;
+}
+
+.date{
+align-self:center;
+background:#e1f3fb;
+padding:4px 10px;
+border-radius:6px;
+font-size:12px;
+margin:8px 0;
+}
+
+#gallery{
+display:none;
+grid-template-columns:repeat(3,1fr);
+gap:2px;
+overflow:auto;
+}
+
+.gal{
+aspect-ratio:1/1;
+background-size:cover;
+background-position:center;
+}
+
+#search{
+border:none;
+padding:8px;
+border-bottom:1px solid #ccc;
+}
+
+.full{
+position:fixed;
+inset:0;
+background:black;
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.full img{
+max-width:100%;
+max-height:100%;
+}
+
+.fab{
+position:fixed;
+right:20px;
+bottom:20px;
+width:56px;
+height:56px;
+border:none;
+border-radius:50%;
+background:#34c759;
+color:white;
+font-size:26px;
+}
+
+</style>
 
 </head>
 
 <body>
 
-<div id="home">
-
-<header class="ios-header">
-WhatsView
+<header>
+<div onclick="limpar()">Limpar</div>
+<div>WhatsView</div>
+<div onclick="exportar()">Exportar</div>
 </header>
 
 <div id="chat-list"></div>
 
 <button class="fab" onclick="novaConversa()">+</button>
 
-</div>
-
 <div id="chat">
 
-<header class="ios-header">
+<header>
 
-<button onclick="voltar()">‹</button>
+<div onclick="fechar()">❮</div>
 
-<div id="chat-name"></div>
+<div id="chat-title"></div>
 
-<div class="icons">
-
-<span onclick="mediaTimeline()">🖼</span> <span onclick="abrirArquivos()">➕</span>
-
+<div>
+<span onclick="verGaleria()">🖼</span>
+<span onclick="abrirArquivos()">➕</span>
 </div>
 
 </header>
 
-<input id="search" placeholder="Buscar">
+<input id="search" placeholder="Buscar..." oninput="buscar(this.value)">
 
 <div id="messages"></div>
 
-<div id="media-view"></div>
+<div id="gallery"></div>
 
+</div>
+
+<div class="full" id="viewer" onclick="fecharViewer()">
+<img id="viewer-img">
 </div>
 
 <input type="file" id="files" multiple webkitdirectory hidden>
 
-<script src="app.js"></script>
+<script>
 
-<script src="player.js"></script>
+let db=[]
+let chat=""
+let urlCache={}
 
-<script src="lazyload.js"></script>
+let page=0
+let pageSize=120
 
-<script src="media.js"></script>
+localforage.getItem("db").then(d=>{
+if(d) db=d
+renderChats()
+})
+
+function novaConversa(){
+
+let nome=prompt("Nome da conversa")
+
+if(nome) abrir(nome)
+
+}
+
+function abrir(nome){
+
+chat=nome
+page=0
+
+document.getElementById("chat-title").innerText=nome
+
+document.getElementById("chat").style.display="flex"
+
+document.getElementById("messages").innerHTML=""
+
+carregarMais()
+
+}
+
+function fechar(){
+
+document.getElementById("chat").style.display="none"
+
+}
+
+function abrirArquivos(){
+
+document.getElementById("files").click()
+
+}
+
+document.getElementById("files").addEventListener("change",e=>{
+
+importar(e.target.files)
+
+})
+
+async function importar(files){
+
+for(let file of files){
+
+if(file.name.endsWith(".zip")){
+
+await lerZip(file)
+
+}else{
+
+await salvar(file,file.name)
+
+}
+
+}
+
+db.sort((a,b)=>a.ts-b.ts)
+
+await localforage.setItem("db",db)
+
+renderChats()
+carregarMais()
+
+}
+
+async function lerZip(file){
+
+const zip=await JSZip.loadAsync(file)
+
+for(const path in zip.files){
+
+let entry=zip.files[path]
+
+if(entry.dir) continue
+
+if(path.endsWith(".txt")){
+
+let txt=await entry.async("string")
+
+parseTexto(txt)
+
+}else{
+
+let blob=await entry.async("blob")
+
+await salvar(blob,path)
+
+}
+
+}
+
+}
+
+async function salvar(blob,nome){
+
+if(db.find(x=>x.mKey===nome)) return
+
+await localforage.setItem("media_"+nome,blob)
+
+db.push({
+
+ts:Date.now(),
+sender:"Arquivo",
+msg:"",
+grupo:chat,
+mKey:nome
+
+})
+
+}
+
+function parseTexto(t){
+
+let linhas=t.split("\n")
+
+for(let l of linhas){
+
+let m=l.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s(\d{1,2}):(\d{2})\s-\s(.*?):\s([\s\S]*)$/)
+
+if(m){
+
+let ano=m[3].length==2?"20"+m[3]:m[3]
+
+let data=new Date(`${ano}-${m[2]}-${m[1]}T${m[4]}:${m[5]}`)
+
+db.push({
+
+ts:data.getTime(),
+sender:m[6],
+msg:m[7],
+grupo:chat
+
+})
+
+}
+
+}
+
+}
+
+async function carregarMais(){
+
+let area=document.getElementById("messages")
+
+let msgs=db.filter(x=>x.grupo==chat)
+
+.slice().reverse()
+
+.slice(page*pageSize,(page+1)*pageSize)
+
+msgs.reverse()
+
+let ultima=""
+
+for(let m of msgs){
+
+let data=new Date(m.ts).toLocaleDateString()
+
+if(data!==ultima){
+
+let d=document.createElement("div")
+
+d.className="date"
+
+d.innerText=data
+
+area.appendChild(d)
+
+ultima=data
+
+}
+
+let div=document.createElement("div")
+
+let mine=m.sender.includes("Você")
+
+div.className="bubble "+(mine?"mine":"theirs")
+
+let media=""
+
+if(m.mKey){
+
+let blob=await localforage.getItem("media_"+m.mKey)
+
+if(blob){
+
+if(!urlCache[m.mKey]){
+
+urlCache[m.mKey]=URL.createObjectURL(blob)
+
+}
+
+let url=urlCache[m.mKey]
+
+let l=m.mKey.toLowerCase()
+
+if(l.match(/\.(jpg|jpeg|png|webp|gif)/))
+
+media=`<div class="media"><img src="${url}" onclick="ver('${url}')"></div>`
+
+else if(l.match(/\.(mp4|3gp|mov|mkv|webm)/))
+
+media=`<video controls src="${url}"></video>`
+
+else if(l.match(/\.(mp3|ogg|m4a|opus|aac|wav)/))
+
+media=`<audio controls src="${url}"></audio>`
+
+}
+
+}
+
+let hora=new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+
+div.innerHTML=`${media}<div>${m.msg}</div><div class="time">${hora}</div>`
+
+area.appendChild(div)
+
+}
+
+page++
+
+}
+
+document.getElementById("messages").addEventListener("scroll",e=>{
+
+if(e.target.scrollTop<100){
+
+carregarMais()
+
+}
+
+})
+
+function renderChats(){
+
+let h=document.getElementById("chat-list")
+
+h.innerHTML=""
+
+let chats=[...new Set(db.map(x=>x.grupo))]
+
+for(let c of chats){
+
+let d=document.createElement("div")
+
+d.className="chat-row"
+
+d.innerHTML=`<div class="avatar">${c[0]}</div><div>${c}</div>`
+
+d.onclick=()=>abrir(c)
+
+h.appendChild(d)
+
+}
+
+}
+
+function ver(url){
+
+document.getElementById("viewer").style.display="flex"
+
+document.getElementById("viewer-img").src=url
+
+}
+
+function fecharViewer(){
+
+document.getElementById("viewer").style.display="none"
+
+}
+
+function buscar(t){
+
+document.querySelectorAll(".bubble").forEach(m=>{
+
+m.style.display=m.innerText.toLowerCase().includes(t.toLowerCase())?"block":"none"
+
+})
+
+}
+
+function verGaleria(){
+
+let g=document.getElementById("gallery")
+
+g.style.display=g.style.display=="grid"?"none":"grid"
+
+}
+
+async function exportar(){
+
+let zip=new JSZip()
+
+let msgs=db.filter(x=>x.grupo==chat)
+
+zip.file("mensagens.json",JSON.stringify(msgs))
+
+let blob=await zip.generateAsync({type:"blob"})
+
+let a=document.createElement("a")
+
+a.href=URL.createObjectURL(blob)
+
+a.download="conversa.zip"
+
+a.click()
+
+}
+
+function limpar(){
+
+if(confirm("Apagar tudo?")){
+
+localforage.clear().then(()=>location.reload())
+
+}
+
+}
+
+</script>
 
 </body>
 </html>

@@ -18,11 +18,11 @@ jobs:
       - name: Instalar Ferramentas
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets
-          # Garante que o Capacitor entenda que a raiz (.) é o site
-          npx cap init WhatsView com.whatsview.app --web-dir . --force
-          npx cap add android || echo "Android já existe"
+          # Removido o --force que causou o erro
+          npx cap init WhatsView com.whatsview.app --web-dir .
+          npx cap add android || echo "Pasta Android já existe"
 
-      - name: Gerar Recursos de Ícone
+      - name: Gerar Ícones
         run: |
           mkdir -p resources
           if [ -f "icon.png" ]; then

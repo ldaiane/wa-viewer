@@ -11,35 +11,36 @@
         :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
         html, body { position: fixed; width: 100%; height: 100%; overflow: hidden; margin: 0; font-family: -apple-system, sans-serif; background: #fff; }
         header { height: 50px; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 0.5px solid #ccc; z-index: 100; }
-        .search-container { padding: 8px 12px; background: #fff; border-bottom: 0.5px solid #ccc; }
-        #searchInput { width: 100%; padding: 8px 12px; border-radius: 10px; border: none; background: #e5e5ea; font-size: 14px; outline: none; box-sizing: border-box; }
-        #home-view { height: calc(100% - 50px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        .chat-list-item { padding: 15px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; cursor: pointer; }
-        #chat-view { display: none; position: fixed; inset: 0; background: var(--ios-bg); flex-direction: column; z-index: 200; }
-        .content-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: flex; flex-direction: column; }
+        .nav-tabs { display: flex; background: #fff; border-bottom: 0.5px solid #ccc; }
+        .tab { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: bold; color: #888; cursor: pointer; }
+        .tab.active { color: var(--ios-blue); border-bottom: 2px solid var(--ios-blue); }
         
-        /* ESTILO DOS BALÕES */
-        .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 12px; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
+        #home-view { height: calc(100% - 50px); overflow-y: auto; }
+        .chat-list-item { padding: 15px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; }
+        
+        #chat-view { display: none; position: fixed; inset: 0; background: var(--ios-bg); flex-direction: column; z-index: 200; }
+        .content-area { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; }
+        
+        /* GALERIA */
+        #gallery-view { display: none; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; background: #fff; height: 100%; }
+        .gallery-item { aspect-ratio: 1/1; background-size: cover; background-position: center; border-radius: 4px; }
+
+        /* BALÕES */
+        .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 12px; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
         .mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .origin-badge { font-size: 9px; font-weight: 900; opacity: 0.7; display: block; margin-bottom: 4px; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
         
-        /* TAG DE ORIGEM */
-        .origin-badge { font-size: 9px; font-weight: 900; display: block; margin-bottom: 4px; opacity: 0.7; text-transform: uppercase; border-bottom: 0.5px solid rgba(0,0,0,0.1); padding-bottom: 2px; }
-        .mine .origin-badge { border-bottom-color: rgba(255,255,255,0.2); }
-        
-        .meta { font-size: 9px; opacity: 0.5; text-align: right; margin-top: 5px; }
-        .fab { position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; border: none; font-size: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 300; }
-        
-        .media-box { margin-top: 8px; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.03); }
-        img, video { max-width: 100%; display: block; border-radius: 8px; }
+        .media-container { margin-top: 8px; border-radius: 10px; overflow: hidden; }
+        img, video { max-width: 100%; display: block; }
         audio { width: 100%; height: 35px; margin-top: 5px; }
-        .pdf-link { display: block; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 8px; text-decoration: none; color: #000; font-weight: bold; font-size: 11px; text-align: center; }
+        .fab { position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; font-size: 30px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 300; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="color:var(--ios-blue); font-size:12px; font-weight:bold; cursor:pointer;" onclick="resetApp()">LIMPAR</div>
+    <div style="color:var(--ios-blue); font-size:12px; font-weight:bold;" onclick="resetApp()">LIMPAR</div>
     <div style="font-weight:bold;">WhatsView Pro</div>
     <div style="width:40px;"></div>
 </header>
@@ -48,12 +49,17 @@
 
 <div id="chat-view">
     <header>
-        <div style="color:var(--ios-blue); font-weight:bold; cursor:pointer;" onclick="closeChat()">❮ VOLTAR</div>
+        <div style="color:var(--ios-blue); font-weight:bold;" onclick="closeChat()">❮ VOLTAR</div>
         <div id="chat-title" style="font-weight:bold; font-size:13px;"></div>
         <div style="width:40px;"></div>
     </header>
-    <div class="search-container"><input type="text" id="searchInput" placeholder="Buscar nas mensagens..." oninput="filterMessages()"></div>
-    <div id="msg-container" class="content-area"></div>
+    <div class="nav-tabs">
+        <div class="tab active" id="tab-chat" onclick="switchTab('chat')">CONVERSA</div>
+        <div class="tab" id="tab-gallery" onclick="switchTab('gallery')">GALERIA</div>
+    </div>
+    
+    <div id="chat-content" class="content-area"></div>
+    <div id="gallery-view"></div>
 </div>
 
 <button class="fab" onclick="document.getElementById('fileInput').click()">+</button>
@@ -61,11 +67,11 @@
 
 <script>
     let mainDb = [];
-    let mediaUrls = new Map();
+    let mediaStore = {}; // Objeto para guardar Blobs reais
     let currentGroup = "";
 
     async function handleFiles(files) {
-        alert("Mesclando arquivos e organizando cronologia...");
+        alert("Processando mídias e logs...");
         for (let file of Array.from(files)) {
             if (file.name.endsWith('.zip')) {
                 const zip = await JSZip.loadAsync(file);
@@ -75,56 +81,34 @@
                         processText(await entry.async("string"), filename);
                     } else if (!entry.dir) {
                         const blob = await entry.async("blob");
-                        mediaUrls.set(filename, URL.createObjectURL(blob));
+                        // Criamos uma URL interna que o APK consegue ler
+                        mediaStore[filename] = URL.createObjectURL(blob);
                     }
                 }
             } else if (file.name.endsWith('.txt')) {
                 processText(await file.text(), file.name);
             }
         }
-
-        // Ordenação por tempo (Timestamp)
         mainDb.sort((a, b) => a.timestamp - b.timestamp);
-
-        // Remover duplicatas exatas
-        const seen = new Set();
-        mainDb = mainDb.filter(item => {
-            const k = `${item.timestamp}-${item.sender}-${item.text}`;
-            return seen.has(k) ? false : seen.add(k);
-        });
-
-        await localforage.setItem('wv_db_v5', mainDb);
+        await localforage.setItem('wv_main_db', mainDb);
         renderHome();
-        if(currentGroup) openChat(currentGroup);
-        alert("Processamento concluído!");
+        alert("Arquivos carregados!");
     }
 
     function processText(content, fileName) {
         const lines = content.split('\n');
-        const cleanFileName = fileName.replace('.txt', '');
-        const groupName = cleanFileName.replace('Conversa do WhatsApp com ', '');
-        
+        const groupName = fileName.replace('Conversa do WhatsApp com ', '').replace('.txt', '');
         lines.forEach(line => {
             const match = line.match(/^(\d{2})\/(\d{2})\/(\d{4})[ ,](\d{2}):(\d{2}) - (.*?): (.*)$/);
             if (match) {
                 const [, day, month, year, hour, min, sender, text] = match;
                 const timestamp = new Date(year, month - 1, day, hour, min).getTime();
-                
-                let mediaKey = null;
-                for (let mName of mediaUrls.keys()) {
-                    if (text.includes(mName)) { mediaKey = mName; break; }
+                let foundMedia = null;
+                // Busca se o texto cita algum arquivo que temos no ZIP
+                for (let mName in mediaStore) {
+                    if (text.includes(mName)) { foundMedia = mName; break; }
                 }
-                
-                mainDb.push({ 
-                    date: `${day}/${month}/${year}`, 
-                    time: `${hour}:${min}`, 
-                    timestamp, 
-                    sender, 
-                    text, 
-                    group: groupName, 
-                    origin: cleanFileName, // Guarda o nome do arquivo de origem
-                    mediaKey 
-                });
+                mainDb.push({ date: `${day}/${month}/${year}`, time: `${hour}:${min}`, timestamp, sender, text, group: groupName, origin: fileName, mediaKey: foundMedia });
             }
         });
     }
@@ -136,7 +120,7 @@
             const div = document.createElement('div');
             div.className = 'chat-list-item';
             div.onclick = () => openChat(g);
-            div.innerHTML = `<div style="width:40px; height:40px; background:var(--ios-blue); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold;">${g[0].toUpperCase()}</div><div style="font-weight:600;">${g}</div>`;
+            div.innerHTML = `<div style="width:40px; height:40px; background:var(--ios-blue); border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold;">${g[0]}</div><div><b>${g}</b></div>`;
             home.appendChild(div);
         });
     }
@@ -144,45 +128,66 @@
     function openChat(groupName) {
         currentGroup = groupName;
         document.getElementById('chat-title').innerText = groupName;
-        renderMessages(mainDb.filter(m => m.group === groupName));
         document.getElementById('chat-view').style.display = 'flex';
+        switchTab('chat');
     }
 
-    function renderMessages(msgs) {
-        const container = document.getElementById('msg-container');
+    function switchTab(type) {
+        const chatContent = document.getElementById('chat-content');
+        const galleryContent = document.getElementById('gallery-view');
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+        if (type === 'chat') {
+            document.getElementById('tab-chat').classList.add('active');
+            chatContent.style.display = 'flex';
+            galleryContent.style.display = 'none';
+            renderMessages();
+        } else {
+            document.getElementById('tab-gallery').classList.add('active');
+            chatContent.style.display = 'none';
+            galleryContent.style.display = 'grid';
+            renderGallery();
+        }
+    }
+
+    function renderMessages() {
+        const container = document.getElementById('chat-content');
         container.innerHTML = '';
-        msgs.forEach(m => {
-            const isMine = m.sender.toLowerCase().includes("você") || m.sender.toLowerCase().includes("me");
+        mainDb.filter(m => m.group === currentGroup).forEach(m => {
+            const isMine = m.sender.toLowerCase().includes("você");
             const div = document.createElement('div');
             div.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
             
             let mediaHtml = '';
             if (m.mediaKey) {
-                const url = mediaUrls.get(m.mediaKey);
-                if (m.mediaKey.match(/\.(jpg|jpeg|png|webp|gif)$/i)) mediaHtml = `<div class="media-box"><img src="${url}"></div>`;
-                else if (m.mediaKey.match(/\.(mp4|3gp|mov)$/i)) mediaHtml = `<div class="media-box"><video controls src="${url}"></video></div>`;
+                const url = mediaStore[m.mediaKey];
+                if (m.mediaKey.match(/\.(jpg|jpeg|png|webp)$/i)) mediaHtml = `<div class="media-container"><img src="${url}"></div>`;
+                else if (m.mediaKey.match(/\.(mp4|3gp)$/i)) mediaHtml = `<div class="media-container"><video controls src="${url}"></video></div>`;
                 else if (m.mediaKey.match(/\.(opus|mp3|m4a)$/i)) mediaHtml = `<audio controls src="${url}"></audio>`;
-                else if (m.mediaKey.endsWith('.pdf')) mediaHtml = `<a href="${url}" target="_blank" class="pdf-link">📄 ARQUIVO: ${m.mediaKey}</a>`;
             }
 
-            div.innerHTML = `<span class="origin-badge">📂 ${m.origin}</span>
-                             <div style="font-weight:bold; font-size:10px; opacity:0.8;">${m.sender}</div>
-                             ${mediaHtml}
-                             <div style="margin-top:4px;">${m.text}</div>
-                             <div class="meta">${m.date} ${m.time}</div>`;
+            div.innerHTML = `<span class="origin-badge">📂 ${m.origin}</span><b>${m.sender}</b>${mediaHtml}<div>${m.text}</div><div style="font-size:9px; opacity:0.5; text-align:right;">${m.date} ${m.time}</div>`;
             container.appendChild(div);
         });
         container.scrollTop = container.scrollHeight;
     }
 
-    function filterMessages() {
-        const term = document.getElementById('searchInput').value.toLowerCase();
-        renderMessages(mainDb.filter(m => m.group === currentGroup && m.text.toLowerCase().includes(term)));
+    function renderGallery() {
+        const container = document.getElementById('gallery-view');
+        container.innerHTML = '';
+        mainDb.filter(m => m.group === currentGroup && m.mediaKey).forEach(m => {
+            if (m.mediaKey.match(/\.(jpg|jpeg|png|webp)$/i)) {
+                const div = document.createElement('div');
+                div.className = 'gallery-item';
+                div.style.backgroundImage = `url(${mediaStore[m.mediaKey]})`;
+                container.appendChild(div);
+            }
+        });
     }
 
-    function closeChat() { document.getElementById('chat-view').style.display = 'none'; currentGroup = ""; }
-    function resetApp() { if(confirm("Apagar todos os logs permanentemente?")) { localforage.clear().then(() => location.reload()); } }
-    localforage.getItem('wv_db_v5').then(saved => { if(saved) { mainDb = saved; renderHome(); } });
+    function closeChat() { document.getElementById('chat-view').style.display = 'none'; }
+    function resetApp() { if(confirm("Limpar tudo?")) { localforage.clear().then(() => location.reload()); } }
+    localforage.getItem('wv_main_db').then(saved => { if(saved) { mainDb = saved; renderHome(); } });
 </script>
 </body>
 </html>

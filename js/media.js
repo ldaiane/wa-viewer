@@ -1,25 +1,24 @@
-function loadFolder(files){
+function mediaTimeline(){
 
-for(let file of files){
+let area=document.getElementById("media-view")
 
-if(file.name.endsWith(".txt")){
+area.innerHTML=""
 
-file.text().then(parseWhatsApp)
+let medias=db.filter(x=>x.grupo==chatAtual && x.mKey)
 
-}else{
+medias.forEach(async m=>{
 
-currentChat.messages.push({
+let blob=await localforage.getItem("media_"+m.mKey)
 
-sender:"arquivo",
-date:new Date(),
-media:file
+let url=URL.createObjectURL(blob)
+
+let img=document.createElement("div")
+
+img.style.backgroundImage="url("+url+")"
+img.className="gal"
+
+area.appendChild(img)
 
 })
-
-}
-
-}
-
-renderChat()
 
 }

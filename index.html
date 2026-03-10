@@ -10,7 +10,7 @@
     <style>
         :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; font-family: -apple-system, sans-serif; background: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { margin: 0; font-family: -apple-system, sans-serif; background: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         
         header { height: 60px; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 0.5px solid #ccc; flex-shrink: 0; }
         .nav-tabs { display: flex; background: #fff; border-bottom: 0.5px solid #ccc; flex-shrink: 0; }
@@ -18,37 +18,33 @@
         .tab.active { color: var(--ios-blue); border-bottom: 3px solid var(--ios-blue); }
 
         #home-view { flex: 1; overflow-y: auto; background: #fff; }
-        .chat-item { padding: 16px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; cursor: pointer; }
+        .chat-item { padding: 16px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; }
         .avatar { width: 45px; height: 45px; background: var(--ios-blue); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 
         #chat-view { display: none; position: fixed; inset: 0; background: var(--ios-bg); flex-direction: column; z-index: 200; }
-        .message-area { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .message-area { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
         
-        /* BALÕES */
         .bubble { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 14px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-wrap: break-word; }
         .mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .theirs { background: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .origin-tag { font-size: 9px; opacity: 0.6; display: block; margin-bottom: 4px; font-weight: bold; text-transform: uppercase; border-bottom: 0.5px solid rgba(0,0,0,0.1); padding-bottom: 2px; }
+        .origin-tag { font-size: 9px; opacity: 0.6; display: block; margin-bottom: 4px; font-weight: bold; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
         
-        /* MÍDIAS */
-        .media-box { margin: 8px 0; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.05); }
-        img, video { max-width: 100%; display: block; height: auto; }
-        audio { width: 100%; height: 35px; }
-        .pdf-btn { display: block; padding: 10px; background: #fff; color: #000; text-decoration: none; border-radius: 8px; text-align: center; font-weight: bold; font-size: 12px; border: 1px solid #ddd; }
+        .media-box { margin: 8px 0; border-radius: 10px; overflow: hidden; background: #000; }
+        img, video { max-width: 100%; display: block; height: auto; margin: 0 auto; }
+        audio { width: 100%; height: 40px; }
+        .pdf-btn { display: block; padding: 12px; background: #fff; color: var(--ios-blue); text-decoration: none; border-radius: 8px; text-align: center; font-weight: bold; font-size: 12px; border: 1px solid var(--ios-blue); }
 
-        /* GALERIA */
-        #gallery-view { display: none; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; background: #fff; flex: 1; }
-        .gallery-thumb { aspect-ratio: 1/1; background-size: cover; background-position: center; border-radius: 4px; background-color: #eee; }
+        #gallery-view { display: none; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; overflow-y: auto; flex: 1; background: #fff; }
+        .gallery-thumb { aspect-ratio: 1/1; background-size: cover; background-position: center; border-radius: 4px; border: 1px solid #eee; }
 
-        /* BOTÕES */
         .fab { position: fixed; bottom: 25px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; border: none; font-size: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 300; display: flex; align-items: center; justify-content: center; }
-        .add-btn-inner { background: #e5e5ea; padding: 10px; text-align: center; font-weight: bold; color: var(--ios-blue); font-size: 13px; cursor: pointer; border-bottom: 0.5px solid #ccc; }
+        .add-btn-chat { background: #fff; padding: 12px; text-align: center; font-weight: bold; color: var(--ios-blue); border-bottom: 0.5px solid #ccc; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="color:var(--ios-blue); font-size:12px; font-weight:bold;" onclick="resetApp()">LIMPAR</div>
+    <div style="color:var(--ios-blue); font-size:12px; font-weight:bold; cursor:pointer;" onclick="resetApp()">LIMPAR TUDO</div>
     <div style="font-weight:bold;">WhatsView Pro</div>
     <div style="width:40px;"></div>
 </header>
@@ -57,7 +53,7 @@
 
 <div id="chat-view">
     <header>
-        <div style="color:var(--ios-blue); font-weight:bold;" onclick="closeChat()">❮ VOLTAR</div>
+        <div style="color:var(--ios-blue); font-weight:bold; cursor:pointer;" onclick="closeChat()">❮ VOLTAR</div>
         <div id="chat-title" style="font-weight:bold; font-size:14px;"></div>
         <div style="width:40px;"></div>
     </header>
@@ -65,61 +61,101 @@
         <div class="tab active" id="tab-msg" onclick="switchTab('msg')">CONVERSA</div>
         <div class="tab" id="tab-gal" onclick="switchTab('gal')">GALERIA</div>
     </div>
-    <div class="add-btn-inner" onclick="triggerInput()">+ ADICIONAR ARQUIVOS NESTA CONVERSA</div>
+    <div class="add-btn-chat" onclick="triggerInput()">➕ SELECIONAR ARQUIVOS DA PASTA</div>
     <div id="message-container" class="message-area"></div>
-    <div id="gallery-container"></div>
+    <div id="gallery-view"></div>
 </div>
 
 <button id="main-fab" class="fab" onclick="triggerInput()">+</button>
-<input type="file" id="fileInput" multiple accept=".zip,.txt" style="display:none" onchange="handleFiles(this.files)">
+<input type="file" id="fileInput" multiple accept="*/*" style="display:none" onchange="handleFiles(this.files)">
 
 <script>
     let db = [];
-    let mediaCache = new Map();
     let currentChat = "";
 
     async function triggerInput() { document.getElementById('fileInput').click(); }
 
+    // Função para converter arquivo em Base64 para persistência no APK
+    const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
     async function handleFiles(files) {
-        alert("Processando... Aguarde o aviso de conclusão.");
+        alert("Lendo arquivos selecionados...");
+        const tempMediaStore = new Map();
+        const textFiles = [];
+
+        // Primeiro passo: Separar o que é mídia e o que é texto
         for (let file of Array.from(files)) {
-            if (file.name.endsWith('.zip')) {
+            const ext = file.name.split('.pop').pop().toLowerCase();
+            
+            if (file.name.endsWith('.txt')) {
+                textFiles.push({ name: file.name, content: await file.text() });
+            } else if (file.name.endsWith('.zip')) {
+                // Se ainda quiserem subir ZIP, mantemos a lógica
                 const zip = await JSZip.loadAsync(file);
                 for (let path in zip.files) {
                     const entry = zip.files[path];
                     if (path.endsWith('.txt')) {
-                        await parseText(await entry.async("string"), path);
+                        textFiles.push({ name: path, content: await entry.async("string") });
                     } else if (!entry.dir) {
-                        const blob = await entry.async("blob");
-                        mediaCache.set(path, URL.createObjectURL(blob));
+                        const base64 = await entry.async("base64");
+                        const mExt = path.split('.').pop().toLowerCase();
+                        let prefix = "data:image/png;base64,";
+                        if(mExt === 'mp4' || mExt === '3gp') prefix = "data:video/mp4;base64,";
+                        if(['opus', 'mp3', 'm4a', 'ogg'].includes(mExt)) prefix = "data:audio/mp3;base64,";
+                        if(mExt === 'pdf') prefix = "data:application/pdf;base64,";
+                        tempMediaStore.set(path, prefix + base64);
                     }
                 }
-            } else if (file.name.endsWith('.txt')) {
-                await parseText(await file.text(), file.name);
+            } else {
+                // Arquivos soltos da pasta (fotos, áudios, etc)
+                const b64 = await toBase64(file);
+                tempMediaStore.set(file.name, b64);
             }
         }
+
+        // Segundo passo: Processar os textos e casar com as mídias
+        for (let txt of textFiles) {
+            await parseText(txt.content, txt.name, tempMediaStore);
+        }
         
-        // Ordenação e Limpeza
         db.sort((a, b) => a.ts - b.ts);
-        db = Array.from(new Set(db.map(m => JSON.stringify(m)))).map(s => JSON.parse(s));
-        
-        await localforage.setItem('wv_v6_data', db);
+        await localforage.setItem('wv_v8_folder', db);
         renderHome();
-        if(currentChat) openChat(currentChat);
-        alert("Arquivos adicionados com sucesso!");
+        if(currentChat) renderMessages();
+        alert("Importação concluída com sucesso!");
     }
 
-    async function parseText(content, origin) {
+    async function parseText(content, origin, mediaStore) {
         const group = origin.replace('Conversa do WhatsApp com ', '').replace('.txt', '');
         const lines = content.split('\n');
+        
         lines.forEach(line => {
             const match = line.match(/^(\d{2})\/(\d{2})\/(\d{4})[ ,](\d{2}):(\d{2}) - (.*?): (.*)$/);
             if (match) {
                 const [, d, m, y, h, min, sender, msg] = match;
                 const ts = new Date(y, m-1, d, h, min).getTime();
+                let mediaData = null;
                 let mKey = null;
-                for (let k of mediaCache.keys()) { if (msg.includes(k)) { mKey = k; break; } }
-                db.push({ ts, date: `${d}/${m}/${y}`, time: `${h}:${min}`, sender, msg, group, origin, mKey });
+
+                // Tenta achar se o nome de algum arquivo de mídia está nesta linha
+                for (let [key, val] of mediaStore) {
+                    if (msg.includes(key)) {
+                        mediaData = val;
+                        mKey = key;
+                        break;
+                    }
+                }
+                
+                // Evita duplicatas
+                const isDup = db.some(x => x.ts === ts && x.msg === msg && x.group === group);
+                if(!isDup) {
+                    db.push({ ts, date: `${d}/${m}/${y}`, time: `${h}:${min}`, sender, msg, group, origin, mKey, mediaData });
+                }
             }
         });
     }
@@ -146,7 +182,7 @@
 
     function switchTab(type) {
         const msgBox = document.getElementById('message-container');
-        const galBox = document.getElementById('gallery-container');
+        const galBox = document.getElementById('gallery-view');
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
 
         if (type === 'msg') {
@@ -156,7 +192,6 @@
         } else {
             document.getElementById('tab-gal').classList.add('active');
             msgBox.style.display = 'none'; galBox.style.display = 'grid';
-            galBox.className = ''; galBox.id = 'gallery-view'; galBox.style.display = 'grid';
             renderGallery();
         }
     }
@@ -169,15 +204,19 @@
             div.className = `bubble ${mine ? 'mine' : 'theirs'}`;
             
             let mHtml = '';
-            if (m.mKey) {
-                const url = mediaCache.get(m.mKey);
-                if (m.mKey.match(/\.(jpg|jpeg|png|webp)$/i)) mHtml = `<div class="media-box"><img src="${url}"></div>`;
-                else if (m.mKey.match(/\.(mp4|3gp)$/i)) mHtml = `<div class="media-box"><video controls src="${url}"></video></div>`;
-                else if (m.mKey.match(/\.(opus|mp3|m4a)$/i)) mHtml = `<div class="media-box"><audio controls src="${url}"></audio></div>`;
-                else if (m.mKey.endsWith('.pdf')) mHtml = `<div class="media-box"><a href="${url}" class="pdf-btn" target="_blank">📄 PDF: ${m.mKey}</a></div>`;
+            if (m.mediaData) {
+                const isImg = m.mKey.match(/\.(jpg|jpeg|png|webp)$/i);
+                const isVid = m.mKey.match(/\.(mp4|3gp|mov)$/i);
+                const isAud = m.mKey.match(/\.(opus|mp3|m4a|ogg)$/i);
+                const isPdf = m.mKey.endsWith('.pdf');
+
+                if (isImg) mHtml = `<div class="media-box"><img src="${m.mediaData}"></div>`;
+                else if (isVid) mHtml = `<div class="media-box"><video controls src="${m.mediaData}"></video></div>`;
+                else if (isAud) mHtml = `<div class="media-box"><audio controls src="${m.mediaData}"></audio></div>`;
+                else if (isPdf) mHtml = `<div class="media-box"><a href="${m.mediaData}" class="pdf-btn" download="${m.mKey}">📄 ABRIR PDF</a></div>`;
             }
 
-            div.innerHTML = `<span class="origin-tag">📂 ${m.origin}</span><b>${m.sender}</b>${mHtml}<div>${m.msg}</div><div class="meta" style="font-size:9px; text-align:right; opacity:0.6; margin-top:4px;">${m.date} ${m.time}</div>`;
+            div.innerHTML = `<span class="origin-tag">📂 ${m.origin}</span><b>${m.sender}</b>${mHtml}<div>${m.msg}</div><div style="font-size:9px; text-align:right; opacity:0.6; margin-top:4px;">${m.date} ${m.time}</div>`;
             container.appendChild(div);
         });
         container.scrollTop = container.scrollHeight;
@@ -185,19 +224,19 @@
 
     function renderGallery() {
         const container = document.getElementById('gallery-view'); container.innerHTML = '';
-        db.filter(m => m.group === currentChat && m.mKey).forEach(m => {
+        db.filter(m => m.group === currentChat && m.mediaData).forEach(m => {
             if (m.mKey.match(/\.(jpg|jpeg|png|webp|mp4|3gp)$/i)) {
                 const div = document.createElement('div');
                 div.className = 'gallery-thumb';
-                div.style.backgroundImage = `url(${mediaCache.get(m.mKey)})`;
+                div.style.backgroundImage = `url(${m.mediaData})`;
                 container.appendChild(div);
             }
         });
     }
 
     function closeChat() { document.getElementById('chat-view').style.display = 'none'; document.getElementById('main-fab').style.display = 'flex'; currentChat = ""; }
-    function resetApp() { if(confirm("Apagar tudo?")) { localforage.clear().then(() => location.reload()); } }
-    localforage.getItem('wv_v6_data').then(s => { if(s) { db = s; renderHome(); } });
+    function resetApp() { if(confirm("Limpar tudo?")) { localforage.clear().then(() => location.reload()); } }
+    localforage.getItem('wv_v8_folder').then(s => { if(s) { db = s; renderHome(); } });
 </script>
 </body>
 </html>

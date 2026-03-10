@@ -1,60 +1,82 @@
 name: Gerar APK Final
+
 on:
-  push:
-    branches: [ main ]
+push:
+branches: [ main ]
 
 jobs:
-  android-build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Código
-        uses: actions/checkout@v4
+android-build:
+runs-on: ubuntu-latest
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+```
+steps:
+  - name: Checkout Código
+    uses: actions/checkout@v4
 
-      - name: Preparar Pastas e Instalar Ferramentas
-        run: |
-          # Cria a pasta www que o Capacitor exige
-          mkdir -p www
-          # Copia seu site para dentro da pasta www
-          cp index.html www/
-          cp manifest.json www/ || true
-          cp sw.js www/ || true
-          
-          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets
-          
-          # Inicializa apontando para a pasta www (agora sem o erro do ".")
-          npx cap init WhatsView com.whatsview.app --web-dir www
-          npx cap add android || echo "Pasta Android já existe"
+  - name: Setup Node.js
+    uses: actions/setup-node@v4
+    with:
+      node-version: 20
 
-      - name: Gerar Ícones
-        run: |
-          mkdir -p resources
-          if [ -f "icon.png" ]; then
-            cp icon.png resources/icon-only.png
-            cp icon.png resources/icon-foreground.png
-            cp icon.png resources/icon-background.png
-            npx capacitor-assets generate --android || true
-          fi
+  - name: Preparar Pastas e Instalar Ferramentas
+    run: |
+      mkdir -p www
+      cp index.html www/
+      cp manifest.json www/ || true
+      cp sw.js www/ || true
+      cp ícone.png www/ || true
 
-      - name: Setup Java JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
+      npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets
 
-      - name: Sincronizar e Compilar
-        run: |
-          npx cap sync android
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
+      npx cap init WhatsView com.whatsview.app --web-dir www
+      npx cap add android || echo "Android já existe"
 
-      - name: Enviar APK Pronto
-        uses: actions/upload-artifact@v4
-        with:
-          name: WhatsView-Instalador
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+  - name: Ativar Compartilhamento de ZIP (WhatsApp)
+    run: |
+      MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+      if [ -f "$MANIFEST" ]; then
+        sed -i '/<\/activity>/i \
+        <intent-filter>\n\
+            <action android:name="android.intent.action.SEND"/>\n\
+            <category android:name="android.intent.category.DEFAULT"/>\n\
+            <data android:mimeType="application/zip"/>\n\
+        </intent-filter>\n\
+        <intent-filter>\n\
+            <action android:name="android.intent.action.SEND_MULTIPLE"/>\n\
+            <category android:name="android.intent.category.DEFAULT"/>\n\
+            <data android:mimeType="application/zip"/>\n\
+        </intent-filter>' $MANIFEST
+      fi
+
+  - name: Gerar Ícones Android
+    run: |
+      mkdir -p resources
+      if [ -f "ícone.png" ]; then
+        cp ícone.png resources/icon-only.png
+        cp ícone.png resources/icon-foreground.png
+        cp ícone.png resources/icon-background.png
+        npx capacitor-assets generate --android || true
+      fi
+
+  - name: Setup Java JDK 17
+    uses: actions/setup-java@v4
+    with:
+      distribution: zulu
+      java-version: '17'
+
+  - name: Sincronizar Capacitor
+    run: npx cap sync android
+
+  - name: Compilar APK
+    run: |
+      cd android
+      chmod +x gradlew
+      ./gradlew assembleDebug
+
+  - name: Enviar APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: WhatsView-APK
+      path: android/app/build/outputs/apk/debug/app-debug.apk
+```

@@ -1,278 +1,451 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#007aff">
-    <title>WhatsView Pro</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-    <style>
-        :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; font-family: -apple-system, sans-serif; background: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        
-        header { height: 60px; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 0.5px solid #ccc; flex-shrink: 0; }
-        .nav-tabs { display: flex; background: #fff; border-bottom: 0.5px solid #ccc; flex-shrink: 0; }
-        .tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: bold; color: #888; cursor: pointer; }
-        .tab.active { color: var(--ios-blue); border-bottom: 3px solid var(--ios-blue); }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WhatsView Pro+</title>
 
-        #home-view { flex: 1; overflow-y: auto; background: #fff; }
-        .chat-item { padding: 16px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #eee; }
-        .avatar { width: 45px; height: 45px; background: var(--ios-blue); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 
-        #chat-view { display: none; position: fixed; inset: 0; background: var(--ios-bg); flex-direction: column; z-index: 200; }
-        .message-area { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-        
-        .bubble { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 14px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-wrap: break-word; }
-        .mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .theirs { background: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .origin-tag { font-size: 9px; opacity: 0.6; display: block; margin-bottom: 4px; font-weight: bold; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
-        
-        .media-box { margin: 8px 0; border-radius: 10px; overflow: hidden; background: #e5e5ea; }
-        img, video { max-width: 100%; display: block; height: auto; margin: 0 auto; }
-        audio { width: 100%; height: 40px; }
-        .pdf-btn { display: block; padding: 12px; background: #fff; color: var(--ios-blue); text-decoration: none; border-radius: 8px; text-align: center; font-weight: bold; font-size: 12px; border: 1px solid var(--ios-blue); }
+<style>
 
-        #gallery-view { display: none; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; overflow-y: auto; flex: 1; background: #fff; }
-        .gallery-thumb { aspect-ratio: 1/1; background-size: cover; background-position: center; border-radius: 4px; border: 1px solid #eee; }
+:root{
+--blue:#007aff;
+--bg:#f2f2f7;
+}
 
-        .fab { position: fixed; bottom: 25px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; border: none; font-size: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 300; display: flex; align-items: center; justify-content: center; }
-        .add-btn-chat { background: #fff; padding: 12px; text-align: center; font-weight: bold; color: var(--ios-blue); border-bottom: 0.5px solid #ccc; font-size: 14px; cursor: pointer; }
-    </style>
+body{
+margin:0;
+font-family:-apple-system;
+height:100vh;
+display:flex;
+flex-direction:column;
+overflow:hidden;
+}
+
+header{
+height:60px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 16px;
+border-bottom:1px solid #ccc;
+background:#fff;
+}
+
+#home-view{
+flex:1;
+overflow:auto;
+}
+
+.chat-item{
+display:flex;
+gap:10px;
+padding:16px;
+border-bottom:1px solid #eee;
+cursor:pointer;
+}
+
+.avatar{
+width:45px;
+height:45px;
+border-radius:50%;
+background:var(--blue);
+color:#fff;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+#chat-view{
+position:fixed;
+inset:0;
+background:var(--bg);
+display:none;
+flex-direction:column;
+}
+
+.chat-content{
+flex:1;
+overflow:auto;
+display:flex;
+flex-direction:column;
+gap:8px;
+padding:10px;
+}
+
+.bubble{
+max-width:80%;
+padding:10px;
+border-radius:12px;
+font-size:14px;
+}
+
+.mine{
+background:var(--blue);
+color:white;
+align-self:flex-end;
+}
+
+.theirs{
+background:white;
+align-self:flex-start;
+}
+
+.media img,.media video{
+max-width:100%;
+border-radius:8px;
+}
+
+audio{
+width:100%;
+}
+
+#gallery{
+display:none;
+grid-template-columns:repeat(3,1fr);
+gap:2px;
+overflow:auto;
+}
+
+.gal{
+aspect-ratio:1/1;
+background-size:cover;
+background-position:center;
+}
+
+#search{
+width:100%;
+padding:8px;
+border:none;
+border-bottom:1px solid #ccc;
+}
+
+.fullscreen{
+position:fixed;
+inset:0;
+background:black;
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.fullscreen img{
+max-width:100%;
+max-height:100%;
+}
+
+</style>
 </head>
+
 <body>
 
 <header>
-    <div style="color:var(--ios-blue); font-size:12px; font-weight:bold; cursor:pointer;" onclick="resetApp()">LIMPAR TUDO</div>
-    <div style="font-weight:bold;">WhatsView Pro</div>
-    <div style="width:40px;"></div>
+<div onclick="limpar()">LIMPAR</div>
+<div>WhatsView Pro+</div>
+<div onclick="exportar()">EXPORTAR</div>
 </header>
 
 <div id="home-view"></div>
 
+<button onclick="novaConversa()" style="position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;background:#007aff;color:white;font-size:28px;border:none">+</button>
+
 <div id="chat-view">
-    <header>
-        <div style="color:var(--ios-blue); font-weight:bold; cursor:pointer;" onclick="closeChat()">❮ VOLTAR</div>
-        <div id="chat-title" style="font-weight:bold; font-size:14px;"></div>
-        <div style="width:40px;"></div>
-    </header>
-    <div class="nav-tabs">
-        <div class="tab active" id="tab-msg" onclick="switchTab('msg')">CONVERSA</div>
-        <div class="tab" id="tab-gal" onclick="switchTab('gal')">GALERIA</div>
-    </div>
-    <div class="add-btn-chat" onclick="triggerInput()">➕ SELECIONAR ARQUIVOS DA PASTA</div>
-    <div id="message-container" class="message-area"></div>
-    <div id="gallery-view"></div>
+
+<header>
+<div onclick="fechar()">❮</div>
+<div id="chat-title"></div>
+<div onclick="abrirArquivos()">➕</div>
+</header>
+
+<input id="search" placeholder="Buscar..." oninput="buscar(this.value)">
+
+<div id="messages" class="chat-content"></div>
+
+<div id="gallery"></div>
+
 </div>
 
-<button id="main-fab" class="fab" onclick="triggerInput()">+</button>
-<input type="file" id="fileInput" multiple accept="*/*" style="display:none" onchange="handleFiles(this.files)">
+<div class="fullscreen" id="viewer" onclick="fecharViewer()">
+<img id="viewer-img">
+</div>
+
+<input type="file" id="files" multiple webkitdirectory style="display:none">
 
 <script>
-    let db = [];
-    let currentChat = "";
-    let matchedMediaKeys = new Set();
 
-    async function triggerInput() { document.getElementById('fileInput').click(); }
+let db=[]
+let chat=""
+let urls={}
 
-    // Conversor com injeção forçada de formato para compatibilidade com WebView (APK)
-    const toBase64 = file => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-            let b64 = reader.result;
-            const name = file.name.toLowerCase();
-            let mime = "";
-            
-            if (name.match(/\.(jpg|jpeg)$/)) mime = "image/jpeg";
-            else if (name.endsWith('.png')) mime = "image/png";
-            else if (name.endsWith('.webp')) mime = "image/webp";
-            else if (name.match(/\.(mp4|3gp)$/)) mime = "video/mp4";
-            else if (name.match(/\.(opus|ogg)$/)) mime = "audio/ogg"; // Crucial para áudio do WhatsApp
-            else if (name.match(/\.(mp3|m4a)$/)) mime = "audio/mpeg";
-            else if (name.endsWith('.pdf')) mime = "application/pdf";
+localforage.getItem("db").then(d=>{
+if(d)db=d
+renderHome()
+})
 
-            if (mime) {
-                b64 = `data:${mime};base64,${b64.split(',')[1]}`;
-            }
-            resolve(b64);
-        };
-        reader.onerror = error => reject(error);
-    });
+function novaConversa(){
+let nome=prompt("Nome da conversa")
+if(nome)abrir(nome)
+}
 
-    async function handleFiles(files) {
-        alert("Processando arquivos...");
-        const tempMediaStore = new Map();
-        const textFiles = [];
-        matchedMediaKeys.clear();
+function abrir(nome){
+chat=nome
+document.getElementById("chat-title").innerText=nome
+document.getElementById("chat-view").style.display="flex"
+carregar()
+}
 
-        for (let file of Array.from(files)) {
-            if (file.name.endsWith('.txt')) {
-                textFiles.push({ name: file.name, content: await file.text() });
-            } else if (file.name.endsWith('.zip')) {
-                const zip = await JSZip.loadAsync(file);
-                for (let path in zip.files) {
-                    const entry = zip.files[path];
-                    if (path.endsWith('.txt')) {
-                        textFiles.push({ name: path, content: await entry.async("string") });
-                    } else if (!entry.dir) {
-                        let b64 = await entry.async("base64");
-                        const name = path.toLowerCase();
-                        let prefix = "data:application/octet-stream;base64,";
-                        if (name.match(/\.(jpg|jpeg)$/)) prefix = "data:image/jpeg;base64,";
-                        if (name.endsWith('.png')) prefix = "data:image/png;base64,";
-                        if (name.match(/\.(mp4|3gp)$/)) prefix = "data:video/mp4;base64,";
-                        if (name.match(/\.(opus|ogg)$/)) prefix = "data:audio/ogg;base64,";
-                        if (name.endsWith('.pdf')) prefix = "data:application/pdf;base64,";
-                        tempMediaStore.set(path, prefix + b64);
-                    }
-                }
-            } else {
-                const b64 = await toBase64(file);
-                tempMediaStore.set(file.name, b64);
-            }
-        }
+function fechar(){
+document.getElementById("chat-view").style.display="none"
+}
 
-        for (let txt of textFiles) {
-            await parseText(txt.content, txt.name, tempMediaStore);
-        }
+function abrirArquivos(){
+document.getElementById("files").click()
+}
 
-        // Salva-vidas: Processar mídias que não estavam no .txt (Arquivos órfãos)
-        for (let [key, val] of tempMediaStore) {
-            if (!matchedMediaKeys.has(key)) {
-                const dateMatch = key.match(/(?:IMG|VID|AUD|PTT|DOC)-(\d{4})(\d{2})(\d{2})-WA/i);
-                let ts = Date.now(), d = "01", m = "01", y = "2000", h = "12", min = "00";
-                if (dateMatch) {
-                    y = dateMatch[1]; m = dateMatch[2]; d = dateMatch[3];
-                    ts = new Date(y, m-1, d, h, min).getTime();
-                }
-                
-                // Impede que o mesmo arquivo entre duplicado se já estiver no DB principal
-                const exists = db.some(x => x.mKey === key && x.group === (currentChat || "Desconhecido"));
-                if (!exists) {
-                    db.push({ ts, date: `${d}/${m}/${y}`, time: `${h}:${min}`, sender: "Mídia Anexada", msg: key, group: currentChat || "Desconhecido", origin: "Importação Direta", mKey: key, mediaData: val });
-                }
-            }
-        }
-        
-        db.sort((a, b) => a.ts - b.ts);
-        await localforage.setItem('wv_v9_stable', db);
-        renderHome();
-        if(currentChat) renderMessages();
-        alert("Arquivos adicionados e organizados!");
-    }
+document.getElementById("files").addEventListener("change",e=>{
+importar(e.target.files)
+})
 
-    async function parseText(content, origin, mediaStore) {
-        const group = origin.replace('Conversa do WhatsApp com ', '').replace('.txt', '');
-        const lines = content.split('\n');
-        
-        lines.forEach(line => {
-            const match = line.match(/^(\d{2})\/(\d{2})\/(\d{4})[ ,](\d{2}):(\d{2}) - (.*?): (.*)$/);
-            if (match) {
-                const [, d, m, y, h, min, sender, msg] = match;
-                const ts = new Date(y, m-1, d, h, min).getTime();
-                
-                // Limpeza de caracteres invisíveis do WhatsApp
-                const cleanMsg = msg.replace(/[\u200E\u200F\u202A-\u202E]/g, '');
-                
-                let mediaData = null;
-                let mKey = null;
+async function importar(files){
 
-                for (let [key, val] of mediaStore) {
-                    if (cleanMsg.includes(key)) {
-                        mediaData = val;
-                        mKey = key;
-                        matchedMediaKeys.add(key);
-                        break;
-                    }
-                }
-                
-                const isDup = db.some(x => x.ts === ts && x.msg === msg && x.group === group);
-                if(!isDup) {
-                    db.push({ ts, date: `${d}/${m}/${y}`, time: `${h}:${min}`, sender, msg, group, origin, mKey, mediaData });
-                }
-            }
-        });
-    }
+for(let file of files){
 
-    function renderHome() {
-        const view = document.getElementById('home-view'); view.innerHTML = '';
-        const groups = [...new Set(db.map(m => m.group))];
-        groups.forEach(g => {
-            const div = document.createElement('div');
-            div.className = 'chat-item';
-            div.onclick = () => openChat(g);
-            div.innerHTML = `<div class="avatar">${g[0].toUpperCase()}</div><div><b>${g}</b></div>`;
-            view.appendChild(div);
-        });
-    }
+if(file.name.endsWith(".zip")){
 
-    function openChat(name) {
-        currentChat = name;
-        document.getElementById('chat-title').innerText = name;
-        document.getElementById('chat-view').style.display = 'flex';
-        document.getElementById('main-fab').style.display = 'none';
-        switchTab('msg');
-    }
+await lerZip(file)
 
-    function switchTab(type) {
-        const msgBox = document.getElementById('message-container');
-        const galBox = document.getElementById('gallery-view');
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+}else{
 
-        if (type === 'msg') {
-            document.getElementById('tab-msg').classList.add('active');
-            msgBox.style.display = 'flex'; galBox.style.display = 'none';
-            renderMessages();
-        } else {
-            document.getElementById('tab-gal').classList.add('active');
-            msgBox.style.display = 'none'; galBox.style.display = 'grid';
-            renderGallery();
-        }
-    }
+await salvar(file,file.name)
 
-    function renderMessages() {
-        const container = document.getElementById('message-container'); container.innerHTML = '';
-        db.filter(m => m.group === currentChat).forEach(m => {
-            const mine = m.sender.toLowerCase().includes("você") || m.sender.toLowerCase().includes("me");
-            const div = document.createElement('div');
-            div.className = `bubble ${mine ? 'mine' : 'theirs'}`;
-            
-            let mHtml = '';
-            if (m.mediaData) {
-                const isImg = m.mKey.match(/\.(jpg|jpeg|png|webp)$/i);
-                const isVid = m.mKey.match(/\.(mp4|3gp|mov)$/i);
-                const isAud = m.mKey.match(/\.(opus|mp3|m4a|ogg)$/i);
-                const isPdf = m.mKey.endsWith('.pdf');
+}
 
-                if (isImg) mHtml = `<div class="media-box"><img src="${m.mediaData}"></div>`;
-                else if (isVid) mHtml = `<div class="media-box"><video controls src="${m.mediaData}"></video></div>`;
-                else if (isAud) mHtml = `<div class="media-box"><audio controls src="${m.mediaData}"></audio></div>`;
-                else if (isPdf) mHtml = `<div class="media-box"><a href="${m.mediaData}" class="pdf-btn" download="${m.mKey}">📄 ABRIR PDF</a></div>`;
-            }
+}
 
-            div.innerHTML = `<span class="origin-tag">📂 ${m.origin}</span><b>${m.sender}</b>${mHtml}<div>${m.msg}</div><div style="font-size:9px; text-align:right; opacity:0.6; margin-top:4px;">${m.date} ${m.time}</div>`;
-            container.appendChild(div);
-        });
-        container.scrollTop = container.scrollHeight;
-    }
+db.sort((a,b)=>a.ts-b.ts)
 
-    function renderGallery() {
-        const container = document.getElementById('gallery-view'); container.innerHTML = '';
-        db.filter(m => m.group === currentChat && m.mediaData).forEach(m => {
-            if (m.mKey.match(/\.(jpg|jpeg|png|webp|mp4|3gp)$/i)) {
-                const div = document.createElement('div');
-                div.className = 'gallery-thumb';
-                div.style.backgroundImage = `url(${m.mediaData})`;
-                container.appendChild(div);
-            }
-        });
-    }
+await localforage.setItem("db",db)
 
-    function closeChat() { document.getElementById('chat-view').style.display = 'none'; document.getElementById('main-fab').style.display = 'flex'; currentChat = ""; }
-    function resetApp() { if(confirm("Apagar todos os dados e resetar?")) { localforage.clear().then(() => location.reload()); } }
-    localforage.getItem('wv_v9_stable').then(s => { if(s) { db = s; renderHome(); } });
+carregar()
+
+}
+
+async function lerZip(file){
+
+const zip=await JSZip.loadAsync(file)
+
+for(const path in zip.files){
+
+let entry=zip.files[path]
+
+if(entry.dir)continue
+
+if(path.endsWith(".txt")){
+
+let txt=await entry.async("string")
+
+parseTexto(txt)
+
+}else{
+
+let blob=await entry.async("blob")
+
+await salvar(blob,path)
+
+}
+
+}
+
+}
+
+async function salvar(blob,nome){
+
+await localforage.setItem("media_"+nome,blob)
+
+db.push({
+ts:Date.now(),
+sender:"Arquivo",
+msg:nome,
+grupo:chat,
+mKey:nome
+})
+
+}
+
+function parseTexto(t){
+
+let linhas=t.split("\n")
+
+for(let l of linhas){
+
+let m=l.match(/^(\d{2})\/(\d{2})\/(\d{4}).* - (.*?): (.*)$/)
+
+if(m){
+
+db.push({
+ts:Date.now(),
+sender:m[4],
+msg:m[5],
+grupo:chat
+})
+
+}
+
+}
+
+}
+
+async function carregar(){
+
+let area=document.getElementById("messages")
+
+let gal=document.getElementById("gallery")
+
+area.innerHTML=""
+gal.innerHTML=""
+
+let msgs=db.filter(x=>x.grupo==chat)
+
+for(let m of msgs){
+
+let div=document.createElement("div")
+
+let mine=m.sender.includes("Você")
+
+div.className="bubble "+(mine?"mine":"theirs")
+
+let media=""
+
+if(m.mKey){
+
+let blob=await localforage.getItem("media_"+m.mKey)
+
+if(blob){
+
+let url=URL.createObjectURL(blob)
+
+let l=m.mKey.toLowerCase()
+
+if(l.match(/\.(jpg|png|jpeg|webp)/)){
+
+media=`<div class="media"><img src="${url}" onclick="ver('${url}')"></div>`
+
+let g=document.createElement("div")
+g.className="gal"
+g.style.backgroundImage=`url(${url})`
+gal.appendChild(g)
+
+}
+
+else if(l.match(/\.(mp4|3gp)/))
+media=`<div class="media"><video controls src="${url}"></video></div>`
+
+else if(l.match(/\.(mp3|ogg|m4a|opus)/))
+media=`<audio controls src="${url}"></audio>`
+
+else if(l.endsWith(".pdf"))
+media=`<a href="${url}" target="_blank">📄 PDF</a>`
+
+}
+
+}
+
+div.innerHTML=`<b>${m.sender}</b>${media}<div>${m.msg}</div>`
+
+area.appendChild(div)
+
+}
+
+}
+
+function renderHome(){
+
+let h=document.getElementById("home-view")
+
+h.innerHTML=""
+
+let grupos=[...new Set(db.map(x=>x.grupo))]
+
+for(let g of grupos){
+
+let d=document.createElement("div")
+
+d.className="chat-item"
+
+d.innerHTML=`<div class="avatar">${g[0]}</div>${g}`
+
+d.onclick=()=>abrir(g)
+
+h.appendChild(d)
+
+}
+
+}
+
+function ver(url){
+document.getElementById("viewer").style.display="flex"
+document.getElementById("viewer-img").src=url
+}
+
+function fecharViewer(){
+document.getElementById("viewer").style.display="none"
+}
+
+function buscar(t){
+
+let msgs=document.querySelectorAll(".bubble")
+
+msgs.forEach(m=>{
+m.style.display=m.innerText.toLowerCase().includes(t.toLowerCase())?"block":"none"
+})
+
+}
+
+async function exportar(){
+
+let zip=new JSZip()
+
+let msgs=db.filter(x=>x.grupo==chat)
+
+zip.file("mensagens.json",JSON.stringify(msgs))
+
+for(let m of msgs){
+
+if(m.mKey){
+
+let blob=await localforage.getItem("media_"+m.mKey)
+
+if(blob)zip.file(m.mKey,blob)
+
+}
+
+}
+
+let blob=await zip.generateAsync({type:"blob"})
+
+let a=document.createElement("a")
+
+a.href=URL.createObjectURL(blob)
+
+a.download="conversa.zip"
+
+a.click()
+
+}
+
+function limpar(){
+
+if(confirm("Apagar tudo?")){
+
+localforage.clear().then(()=>location.reload())
+
+}
+
+}
+
 </script>
+
 </body>
 </html>

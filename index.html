@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#007aff">
+    <link rel="manifest" href="manifest.json">
     <title>WhatsView</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <style>
         :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
         html, body { position: fixed; width: 100%; height: 100%; overflow: hidden; margin: 0; font-family: -apple-system, system-ui, sans-serif; background: #fff; }
-
+        
         header, .chat-header { 
-            height: 50px; background: rgba(249, 249, 249, 0.94); backdrop-filter: blur(20px);
-            display: flex; justify-content: space-between; align-items: center; padding: 0 16px;
-            border-bottom: 0.5px solid #ccc; z-index: 100;
+            height: 50px; background: rgba(249, 249, 249, 0.94); backdrop-filter: blur(20px); 
+            display: flex; justify-content: space-between; align-items: center; padding: 0 16px; 
+            border-bottom: 0.5px solid #ccc; z-index: 100; 
         }
 
         #home-view { height: calc(100% - 50px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -22,19 +24,20 @@
         .nav-tabs { display: flex; background: #f9f9f9; padding: 8px; border-bottom: 0.5px solid #ccc; justify-content: center; }
         .tab-btn { border: none; padding: 6px 20px; font-size: 13px; background: #e5e5ea; cursor: pointer; }
         .tab-btn.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold; }
-        .tab-btn:first-child { border-radius: 8px 0 0 8px; }
-        .tab-btn:last-child { border-radius: 0 8px 8px 0; }
-
+        
         .content-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: flex; flex-direction: column; }
 
         .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 10px; font-size: 14px; position: relative; line-height: 1.4; }
         .bubble.mine { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         .bubble.theirs { align-self: flex-start; border-bottom-left-radius: 4px; color: #000; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         
-        /* ETIQUETA DE ORIGEM NO BALÃO */
-        .origin-tag { font-size: 9px; font-weight: 800; opacity: 0.6; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .bubble.mine .origin-tag { color: rgba(255,255,255,0.9); }
-        .bubble.theirs .origin-tag { color: var(--ios-blue); }
+        /* ETIQUETA DE ORIGEM */
+        .origin-label { 
+            font-size: 9px; font-weight: 800; text-transform: uppercase; 
+            display: block; margin-bottom: 4px; opacity: 0.7; letter-spacing: 0.5px;
+        }
+        .bubble.theirs .origin-label { color: var(--ios-blue); }
+        .bubble.mine .origin-label { color: rgba(255,255,255,0.9); }
 
         .sender-name { font-size: 11px; font-weight: bold; margin-bottom: 2px; margin-left: 5px; }
         .meta { font-size: 9px; opacity: 0.6; text-align: right; margin-top: 5px; }
@@ -43,18 +46,15 @@
         .chat-media img, .chat-media video { width: 100%; height: auto; display: block; max-height: 200px; object-fit: contain; }
         audio { width: 100%; height: 35px; margin-top: 5px; }
 
-        #internal-gal { display: none; grid-template-columns: repeat(3, 1fr); gap: 2px; overflow-y: auto; }
-        #internal-gal img { width: 100%; aspect-ratio: 1; object-fit: cover; }
-
         .fab { position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; background: var(--ios-blue); color: white; border-radius: 50%; border: none; font-size: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 300; }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
 
 <header>
     <div style="color:var(--ios-blue); cursor:pointer;" onclick="resetApp()">Limpar</div>
     <div style="font-weight:bold;">WhatsView</div>
-    <div style="width:40px;"></div>
+    <div id="installBtn" style="display:none; color:var(--ios-blue); font-weight:bold;">INSTALAR</div>
 </header>
 
 <div id="home-view"></div>
@@ -70,33 +70,34 @@
         <button id="tab-gal" class="tab-btn" onclick="setTab('gal')">Mídias</button>
     </div>
     <div id="msg-container" class="content-area"></div>
-    <div id="internal-gal" class="content-area"></div>
+    <div id="internal-gal" class="content-area" style="display:none; grid-template-columns: repeat(3, 1fr); gap: 2px;"></div>
 </div>
 
 <button class="fab" onclick="document.getElementById('fileInput').click()">+</button>
 <input type="file" id="fileInput" multiple webkitdirectory directory style="display:none" onchange="processFiles(this.files)">
 
 <script>
+    // Registro do PWA
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
     let dbMsgs = [];
     const mediaCache = new Map();
 
     async function processFiles(files) {
-        alert("Processando... Aguarde a confirmação.");
+        alert("Importando dados...");
         const fileArray = Array.from(files);
         
-        // Mapeia mídias
+        // Mapeia mídias usando Blob URLs (mais leve para o celular)
         fileArray.forEach(f => {
             if (!f.name.endsWith('.txt')) {
                 mediaCache.set(f.name, URL.createObjectURL(f));
             }
         });
 
-        // Processa textos
         for (let f of fileArray) {
             if (f.name.endsWith('.txt')) {
                 const content = await f.text();
-                const fileName = f.name; // Nome completo do arquivo (ex: log_entrega.txt)
-                const chatGroup = f.name.replace('.txt', '');
+                const fileName = f.name.replace('.txt', '');
                 const lines = content.split('\n');
                 
                 lines.forEach(line => {
@@ -107,23 +108,20 @@
                         for (let [name, url] of mediaCache) {
                             if (msg.includes(name)) { foundMedia = { url, name }; break; }
                         }
-                        // Armazena a origem (fileName) junto com a mensagem
-                        dbMsgs.push({ date, time, sender, text: msg, media: foundMedia, source: chatGroup, origin: fileName });
+                        dbMsgs.push({ date, time, sender, text: msg, media: foundMedia, source: fileName, originFile: f.name });
                     }
                 });
             }
         }
-        
         await localforage.setItem('wv_data', dbMsgs);
         renderHome();
-        alert("Importação concluída com sucesso!");
+        alert("Processamento concluído!");
     }
 
     function renderHome() {
         const container = document.getElementById('home-view');
         container.innerHTML = '';
         const groups = [...new Set(dbMsgs.map(m => m.source))];
-        
         groups.forEach(g => {
             const div = document.createElement('div');
             div.className = 'chat-list-item';
@@ -140,18 +138,13 @@
         container.innerHTML = ''; gal.innerHTML = '';
         document.getElementById('chat-title').innerText = source;
 
-        const filtered = dbMsgs.filter(m => m.source === source);
-        filtered.forEach(m => {
+        dbMsgs.filter(m => m.source === source).forEach(m => {
             const isMine = m.sender.includes("Você") || m.sender.includes("Me");
             const color = getColors(m.sender);
-
             const wrap = document.createElement('div');
-            wrap.style.display = 'flex';
-            wrap.style.flexDirection = 'column';
+            wrap.style.display = 'flex'; wrap.style.flexDirection = 'column';
 
-            if (!isMine) {
-                wrap.innerHTML += `<div class="sender-name" style="color:${color.text}">${m.sender}</div>`;
-            }
+            if (!isMine) wrap.innerHTML += `<div class="sender-name" style="color:${color.text}">${m.sender}</div>`;
 
             const bubble = document.createElement('div');
             bubble.className = `bubble ${isMine ? 'mine' : 'theirs'}`;
@@ -162,7 +155,9 @@
                 const ext = m.media.name.split('.').pop().toLowerCase();
                 if (['jpg','png','jpeg','webp'].includes(ext)) {
                     mediaHtml = `<div class="chat-media"><img src="${m.media.url}"></div>`;
-                    gal.innerHTML += `<img src="${m.media.url}" onclick="window.open('${m.media.url}')">`;
+                    const gImg = document.createElement('img'); gImg.src = m.media.url; 
+                    gImg.style.width = '100%'; gImg.style.aspectRatio = '1'; gImg.style.objectFit = 'cover';
+                    gal.appendChild(gImg);
                 } else if (['mp4','mov'].includes(ext)) {
                     mediaHtml = `<div class="chat-media"><video controls playsinline src="${m.media.url}"></video></div>`;
                 } else if (['mp3','opus','ogg'].includes(ext)) {
@@ -170,13 +165,14 @@
                 }
             }
 
-            // ADICIONADO A ORIGEM AQUI: m.origin
-            bubble.innerHTML += `
-                <span class="origin-tag">📂 ${m.origin}</span>
+            // INSERÇÃO DA ORIGEM NO BALÃO
+            bubble.innerHTML = `
+                <span class="origin-label">📂 ${m.originFile}</span>
                 ${mediaHtml}
                 <div style="word-break:break-word;">${m.text}</div>
                 <div class="meta">${m.date} ${m.time}</div>
             `;
+            
             wrap.appendChild(bubble);
             container.appendChild(wrap);
         });
@@ -192,14 +188,15 @@
         document.getElementById('tab-gal').classList.toggle('active', t === 'gal');
     }
 
-    function confirmExit() { if(confirm("Deseja voltar para a lista de conversas?")) document.getElementById('chat-view').style.display = 'none'; }
+    function confirmExit() { if(confirm("Deseja fechar esta conversa?")) document.getElementById('chat-view').style.display = 'none'; }
+    
     function getColors(n) {
         let h = 0; for(let i=0; i<n.length; i++) h = n.charCodeAt(i) + ((h << 5) - h);
         const hue = Math.abs(h % 360);
         return { text: `hsl(${hue}, 70%, 30%)`, bg: `hsl(${hue}, 70%, 93%)` };
     }
 
-    async function resetApp() { if(confirm("Isso apagará todas as mensagens importadas. Continuar?")) { await localforage.clear(); location.reload(); } }
+    async function resetApp() { if(confirm("Apagar todos os dados importados?")) { await localforage.clear(); location.reload(); } }
     localforage.getItem('wv_data').then(d => { if(d) { dbMsgs = d; renderHome(); } });
 </script>
 </body>
